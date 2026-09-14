@@ -9,6 +9,7 @@ import {
   type Cliente,
   type Interaccion,
   type Metricas,
+  type UsuarioRegistrado,
   type UsuarioSesion,
 } from './api';
 
@@ -18,7 +19,10 @@ type Screen =
   | 'clients'
   | 'client-detail'
   | 'interaction-history'
+  | 'evaluations'
+  | 'users'
   | 'crm-stage'
+  | 'settings'
   | 'my-activity'
   | 'my-profile'
   | 'reports';
@@ -143,15 +147,55 @@ function PieChart({ data }: { data: { label: string; val: number; color: string 
   );
 }
 
+function InteractionBarChart({ data }: { data: Metricas['interacciones_por_tipo'] }) {
+  const labels: Record<string, string> = { llamada: 'Llamada', correo: 'Correo', reunion: 'Reunión' };
+  const colors: Record<string, string> = { llamada: '#f59e0b', correo: '#5b9bd5', reunion: '#46b5d1' };
+  const values = ['llamada', 'correo', 'reunion'].map(tipo => ({
+    tipo,
+    label: labels[tipo],
+    total: Number(data.find(item => item.tipo === tipo)?.total ?? 0),
+    color: colors[tipo],
+  }));
+  const max = Math.max(...values.map(item => item.total), 1);
+  const tick = Math.max(1, Math.ceil(max / 4));
+  const top = Math.ceil(max / tick) * tick;
+
+  return (
+    <div className="bg-white rounded-lg border border-neutral-200 p-4">
+      <h2 className="text-sm font-semibold text-neutral-800 mb-4">Interacciones por tipo</h2>
+      {values.every(item => item.total === 0) ? (
+        <div className="h-48 flex items-center justify-center text-sm text-neutral-400">Aún no hay interacciones registradas.</div>
+      ) : (
+        <div className="flex gap-3 h-52">
+          <div className="h-44 flex flex-col justify-between text-[10px] text-neutral-400 pt-1 pb-6">
+            {[top, Math.round(top * 0.75), Math.round(top * 0.5), Math.round(top * 0.25), 0].map((value, index) => <span key={`${value}-${index}`}>{value}</span>)}
+          </div>
+          <div className="relative flex-1 h-44 border-b border-neutral-200 bg-[linear-gradient(to_bottom,transparent_24%,#e5e7eb_25%,transparent_26%,transparent_49%,#e5e7eb_50%,transparent_51%,transparent_74%,#e5e7eb_75%,transparent_76%)]">
+            <div className="absolute inset-x-0 bottom-0 flex h-full items-end justify-around px-4">
+              {values.map(item => (
+                <div key={item.tipo} className="h-full flex flex-col items-center justify-end gap-2">
+                  <span className="text-xs font-medium text-neutral-600">{item.total}</span>
+                  <div className="w-12 max-w-[20vw] rounded-t-sm transition-all" style={{ height: `${Math.max((item.total / top) * 76, 2)}%`, backgroundColor: item.color }} />
+                  <span className="absolute translate-y-7 text-[11px] text-neutral-600">{item.label}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 const NAV = [
   { label: 'Dashboard',    screen: 'dashboard'           as Screen, Icon: IcoGrid,   soloAdmin: true  },
   { label: 'Clientes',     screen: 'clients'             as Screen, Icon: IcoUsers,  soloAdmin: true  },
   { label: 'Interacciones',screen: 'interaction-history' as Screen, Icon: IcoChat,   soloAdmin: true  },
-  { label: 'Evaluaciones', screen: null,                             Icon: IcoStar,   soloAdmin: true  },
-  { label: 'Usuarios',     screen: null,                             Icon: IcoPerson, soloAdmin: true  },
+  { label: 'Evaluaciones', screen: 'evaluations' as Screen,          Icon: IcoStar,   soloAdmin: true  },
+  { label: 'Usuarios',     screen: 'users' as Screen,                Icon: IcoPerson, soloAdmin: true  },
   { label: 'Mi actividad', screen: 'my-activity'         as Screen, Icon: IcoClock,  soloAdmin: false },
   { label: 'Mi perfil',    screen: 'my-profile'          as Screen, Icon: IcoPerson, soloAdmin: false },
-  { label: 'Configuración',screen: null,                             Icon: IcoGear,   soloAdmin: true  },
+  { label: 'Configuración',screen: 'settings' as Screen,             Icon: IcoGear,   soloAdmin: false },
 ];
 
 function Sidebar({ screen, setScreen, esAdmin }: { screen: Screen; setScreen: (s: Screen) => void; esAdmin: boolean }) {
@@ -240,9 +284,14 @@ export default function App() {
 
   const [email, setEmail]         = useState('');
   const [password, setPassword]   = useState('');
+  const [authMode, setAuthMode]   = useState<'login' | 'register'>('login');
+  const [registerForm, setRegisterForm] = useState({ nombre: '', apellido_paterno: '', apellido_materno: '', telefono: '' });
   const [remember, setRemember]   = useState(false);
   const [loginError, setLoginError] = useState('');
   const [loginLoading, setLoginLoading] = useState(false);
+
+  const nombreValido = (value: string) => /^[A-Za-zÁÉÍÓÚÜÑáéíóúüñ]+(?:[ '’-][A-Za-zÁÉÍÓÚÜÑáéíóúüñ]+)*$/.test(value.trim());
+  const passwordValida = /^(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z0-9]).{8,}$/.test(password);
 
   const [clientes, setClientes]       = useState<Cliente[]>([]);
   const [clientesLoading, setClientesLoading] = useState(false);
@@ -273,6 +322,13 @@ export default function App() {
 
   const [miPerfil, setMiPerfil] = useState<(UsuarioSesion & { createdAt: string }) | null>(null);
   const [perfilLoading, setPerfilLoading] = useState(false);
+  const [settingsName, setSettingsName] = useState('');
+  const [settingsEmail, setSettingsEmail] = useState('');
+  const [passwordForm, setPasswordForm] = useState({ passwordActual: '', passwordNueva: '', confirmacion: '' });
+  const [settingsMessage, setSettingsMessage] = useState('');
+  const [settingsError, setSettingsError] = useState('');
+  const [usuarios, setUsuarios] = useState<UsuarioRegistrado[]>([]);
+  const [usuariosLoading, setUsuariosLoading] = useState(false);
 
   const [globalError, setGlobalError] = useState('');
 
@@ -330,10 +386,57 @@ export default function App() {
     try {
       const data = await api.getMiPerfil();
       setMiPerfil(data);
+      setSettingsName(data.nombre);
+      setSettingsEmail(data.correo);
     } catch (err) {
       setGlobalError(err instanceof ApiError ? err.message : 'No se pudo cargar tu perfil');
     } finally {
       setPerfilLoading(false);
+    }
+  }
+
+  async function reloadUsuarios() {
+    setUsuariosLoading(true);
+    try {
+      setUsuarios(await api.getUsuarios());
+    } catch (err) {
+      setGlobalError(err instanceof ApiError ? err.message : 'No se pudo cargar la lista de usuarios');
+    } finally {
+      setUsuariosLoading(false);
+    }
+  }
+
+  async function handleSaveProfile() {
+    setSettingsError('');
+    setSettingsMessage('');
+    try {
+      const actualizado = await api.actualizarPerfil({ nombre: settingsName, correo: settingsEmail });
+      setMiPerfil(prev => prev ? { ...prev, ...actualizado } : prev);
+      setUsuario(prev => prev ? { ...prev, ...actualizado } : prev);
+      if (actualizado) setSession(getToken() ?? '', { ...actualizado });
+      setSettingsMessage('Perfil actualizado correctamente.');
+    } catch (err) {
+      setSettingsError(err instanceof ApiError ? err.message : 'No se pudo actualizar el perfil');
+    }
+  }
+
+  async function handleChangePassword() {
+    setSettingsError('');
+    setSettingsMessage('');
+    if (passwordForm.passwordNueva !== passwordForm.confirmacion) {
+      setSettingsError('La confirmación no coincide con la nueva contraseña');
+      return;
+    }
+    if (!/^(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z0-9]).{8,}$/.test(passwordForm.passwordNueva)) {
+      setSettingsError('La nueva contraseña debe tener 8 caracteres, una mayúscula, un número y un carácter especial');
+      return;
+    }
+    try {
+      await api.actualizarPassword({ passwordActual: passwordForm.passwordActual, passwordNueva: passwordForm.passwordNueva });
+      setPasswordForm({ passwordActual: '', passwordNueva: '', confirmacion: '' });
+      setSettingsMessage('Contraseña actualizada correctamente.');
+    } catch (err) {
+      setSettingsError(err instanceof ApiError ? err.message : 'No se pudo actualizar la contraseña');
     }
   }
 
@@ -356,8 +459,12 @@ export default function App() {
   }, [screen]);
 
   useEffect(() => {
-    if (screen === 'my-profile') reloadMiPerfil();
+    if (screen === 'my-profile' || screen === 'settings') reloadMiPerfil();
   }, [screen]);
+
+  useEffect(() => {
+    if (screen === 'users' && usuario?.rol === 'admin') reloadUsuarios();
+  }, [screen, usuario]);
 
   function openClient(c: Cliente) {
     setSelectedClient(c);
@@ -375,6 +482,38 @@ export default function App() {
       setScreen(u.rol === 'admin' ? 'dashboard' : 'my-activity');
     } catch (err) {
       setLoginError(err instanceof ApiError ? err.message : 'No se pudo iniciar sesión');
+    } finally {
+      setLoginLoading(false);
+    }
+  }
+
+  async function handleRegister() {
+    setLoginError('');
+    const nombres = [registerForm.nombre, registerForm.apellido_paterno, registerForm.apellido_materno];
+    if (nombres.some((value) => !value.trim()) || !email.trim() || !registerForm.telefono || !password) {
+      setLoginError('Completa todos los campos');
+      return;
+    }
+    if (nombres.some((value) => !nombreValido(value))) {
+      setLoginError('Los nombres y apellidos solo pueden contener letras');
+      return;
+    }
+    if (!/^\d{10}$/.test(registerForm.telefono)) {
+      setLoginError('El teléfono debe tener exactamente 10 dígitos');
+      return;
+    }
+    if (!passwordValida) {
+      setLoginError('La contraseña debe tener 8 caracteres, una mayúscula, un número y un carácter especial');
+      return;
+    }
+    setLoginLoading(true);
+    try {
+      await api.register({ ...registerForm, correo: email.trim(), password });
+      setAuthMode('login');
+      setPassword('');
+      setLoginError('Cuenta creada. Ahora puedes iniciar sesión.');
+    } catch (err) {
+      setLoginError(err instanceof ApiError ? err.message : 'No se pudo crear la cuenta');
     } finally {
       setLoginLoading(false);
     }
@@ -473,11 +612,25 @@ export default function App() {
     <div className="min-h-screen bg-neutral-100 flex items-center justify-center">
       <div className="w-full max-w-sm bg-white rounded-xl border border-neutral-200 shadow-sm p-8">
         <div className="text-center mb-7">
-          <div className="text-2xl font-bold tracking-[0.2em] text-neutral-950">INFINITY</div>
+          <div className="text-2xl font-bold tracking-[0.2em] text-cyan-950">BRILLOMAX</div>
           <div className="text-[10px] text-neutral-400 tracking-[0.15em] mt-0.5">CRM</div>
-          <p className="text-sm text-neutral-500 mt-4">Inicia sesión para continuar</p>
+          <p className="text-sm text-neutral-500 mt-4">{authMode === 'login' ? 'Inicia sesión para continuar' : 'Crea tu cuenta'}</p>
         </div>
         <div className="space-y-4">
+          {authMode === 'register' && <>
+            {([['nombre', 'Nombre'], ['apellido_paterno', 'Apellido paterno'], ['apellido_materno', 'Apellido materno']] as const).map(([key, label]) => (
+              <div key={key}>
+                <label className="block text-xs font-medium text-neutral-700 mb-1.5">{label}</label>
+                <input value={registerForm[key]} onChange={e => setRegisterForm({ ...registerForm, [key]: e.target.value.replace(/[^A-Za-zÁÉÍÓÚÜÑáéíóúüñ '’-]/g, '') })} placeholder={label}
+                  className="w-full border border-neutral-300 rounded-lg px-3 py-2 text-sm outline-none focus:border-cyan-700 focus:ring-1 focus:ring-cyan-700 transition placeholder:text-neutral-300" />
+              </div>
+            ))}
+            <div>
+              <label className="block text-xs font-medium text-neutral-700 mb-1.5">Número de teléfono</label>
+              <input type="tel" inputMode="numeric" maxLength={10} value={registerForm.telefono} onChange={e => setRegisterForm({ ...registerForm, telefono: e.target.value.replace(/\D/g, '').slice(0, 10) })} placeholder="10 dígitos"
+                className="w-full border border-neutral-300 rounded-lg px-3 py-2 text-sm outline-none focus:border-cyan-700 focus:ring-1 focus:ring-cyan-700 transition placeholder:text-neutral-300" />
+            </div>
+          </>}
           <div>
             <label className="block text-xs font-medium text-neutral-700 mb-1.5">Correo electrónico</label>
             <input type="email" value={email} onChange={e => setEmail(e.target.value)} placeholder="usuario@ejemplo.com"
@@ -489,20 +642,23 @@ export default function App() {
               onKeyDown={e => e.key === 'Enter' && handleLogin()}
               className="w-full border border-neutral-300 rounded-lg px-3 py-2 text-sm outline-none focus:border-neutral-800 focus:ring-1 focus:ring-neutral-800 transition placeholder:text-neutral-400" />
           </div>
-          <div className="flex items-center gap-2">
+          {authMode === 'login' && <div className="flex items-center gap-2">
             <input id="rem" type="checkbox" checked={remember} onChange={e => setRemember(e.target.checked)}
               className="w-4 h-4 rounded border-neutral-300 accent-neutral-900" />
             <label htmlFor="rem" className="text-xs text-neutral-600">Recordarme</label>
-          </div>
+          </div>}
           {loginError && <p className="text-xs text-red-600">{loginError}</p>}
-          <button onClick={handleLogin} disabled={loginLoading}
-            className="w-full bg-neutral-950 text-white rounded-lg py-2.5 text-sm font-medium hover:bg-neutral-800 transition-colors disabled:opacity-50">
-            {loginLoading ? 'Ingresando…' : 'Iniciar sesión'}
+          {authMode === 'register' && <p className="text-[11px] text-neutral-500">La contraseña debe incluir una mayúscula, un número y un carácter especial.</p>}
+          <button onClick={authMode === 'login' ? handleLogin : handleRegister} disabled={loginLoading}
+            className="w-full bg-cyan-800 text-white rounded-lg py-2.5 text-sm font-medium hover:bg-cyan-900 transition-colors disabled:opacity-50">
+            {loginLoading ? 'Procesando...' : authMode === 'login' ? 'Iniciar sesión' : 'Crear cuenta'}
           </button>
         </div>
         <p className="text-center text-xs text-neutral-500 mt-5">
-          ¿No tienes cuenta?{' '}
-          <span className="text-neutral-800 underline cursor-pointer hover:text-neutral-950 transition-colors">Contacta al administrador</span>
+          {authMode === 'login' ? '¿No tienes cuenta?' : '¿Ya tienes cuenta?'}{' '}
+          <button onClick={() => { setAuthMode(authMode === 'login' ? 'register' : 'login'); setLoginError(''); }} className="text-cyan-800 underline cursor-pointer hover:text-cyan-950 transition-colors">
+            {authMode === 'login' ? 'Regístrate aquí' : 'Inicia sesión'}
+          </button>
         </p>
       </div>
     </div>
@@ -577,6 +733,7 @@ export default function App() {
                         ))}
                       </div>
                     </div>
+                    <InteractionBarChart data={metricas.interacciones_por_tipo} />
                   </div>
                 </>
               )}
@@ -745,6 +902,70 @@ export default function App() {
             <div className="p-6 text-sm text-neutral-500">Selecciona un cliente desde la lista para ver su historial.</div>
           )}
 
+          {screen === 'evaluations' && (
+            <div className="p-6">
+              <h1 className="text-xl font-semibold text-neutral-900">Evaluaciones</h1>
+              <p className="text-sm text-neutral-500 mt-1">Evaluaciones de calidad y satisfacción de clientes</p>
+              <div className="bg-white rounded-lg border border-neutral-200 p-5 mt-8 min-h-[440px] flex flex-col items-center justify-center text-center">
+                <div className="w-20 h-20 rounded-full bg-cyan-50 text-cyan-400 flex items-center justify-center mb-7">
+                  <IcoStar />
+                </div>
+                <h2 className="text-xl font-medium text-cyan-950">Sin evaluaciones registradas</h2>
+                <p className="text-base text-neutral-500 mt-2 max-w-sm">Las evaluaciones de clientes aparecerán aquí una vez que sean registradas.</p>
+                <button className="mt-8 bg-cyan-700 text-white text-base font-medium px-7 py-3 rounded-lg hover:bg-cyan-800 transition-colors">
+                  + Nueva evaluación
+                </button>
+              </div>
+            </div>
+          )}
+
+          {screen === 'users' && (
+            <div className="p-6">
+              <div className="flex items-start justify-between mb-7">
+                <div>
+                  <h1 className="text-xl font-semibold text-neutral-900">Usuarios</h1>
+                  <p className="text-sm text-neutral-500 mt-1">Gestión de cuentas registradas</p>
+                </div>
+                <span className="rounded-full bg-cyan-50 text-cyan-700 px-4 py-1.5 text-sm font-medium">
+                  {usuarios.length} {usuarios.length === 1 ? 'usuario' : 'usuarios'}
+                </span>
+              </div>
+              <div className="bg-white rounded-lg border border-neutral-200 overflow-x-auto">
+                <table className="w-full min-w-[760px] text-sm">
+                  <thead>
+                    <tr className="border-b border-cyan-100 bg-cyan-50/60 text-cyan-800">
+                      {['ID', 'Nombre', 'Correo', 'Rol', 'Estado', 'Registro', 'Acciones'].map((heading) => (
+                        <th key={heading} className="text-left font-medium px-5 py-4 whitespace-nowrap">{heading}</th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {usuariosLoading && <tr><td colSpan={7} className="px-5 py-8 text-center text-neutral-400">Cargando usuarios...</td></tr>}
+                    {!usuariosLoading && usuarios.length === 0 && <tr><td colSpan={7} className="px-5 py-8 text-center text-neutral-400">Aún no hay usuarios registrados.</td></tr>}
+                    {!usuariosLoading && usuarios.map((item) => {
+                      const nombreCompleto = [item.nombre, item.apellido_paterno, item.apellido_materno].filter(Boolean).join(' ');
+                      return (
+                        <tr key={item.id} className="border-b border-neutral-100 last:border-0 hover:bg-cyan-50/40 transition-colors">
+                          <td className="px-5 py-4 text-neutral-500">{item.id}</td>
+                          <td className="px-5 py-4 font-medium text-neutral-900 whitespace-nowrap">{nombreCompleto}</td>
+                          <td className="px-5 py-4 text-neutral-600 whitespace-nowrap">{item.correo}</td>
+                          <td className="px-5 py-4">
+                            <span className={`inline-block rounded px-2.5 py-1 font-medium ${item.rol === 'admin' ? 'bg-cyan-900 text-white' : 'bg-cyan-50 text-cyan-700'}`}>
+                              {item.rol === 'admin' ? 'Admin' : 'Usuario'}
+                            </span>
+                          </td>
+                          <td className="px-5 py-4"><span className="inline-block rounded-full bg-emerald-500 text-white px-3 py-1 font-medium">Activo</span></td>
+                          <td className="px-5 py-4 text-neutral-500 whitespace-nowrap">{new Date(item.createdAt).toLocaleDateString('es-MX')}</td>
+                          <td className="px-5 py-4 text-neutral-400">{item.id === usuario?.id ? 'Tú' : '—'}</td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
+
           {screen === 'crm-stage' && selectedClient && (
             <div className="p-6">
               <div className="grid grid-cols-2 gap-4 max-w-2xl">
@@ -823,16 +1044,73 @@ export default function App() {
               <div className="bg-white rounded-lg border border-neutral-200 p-5">
                 {perfilLoading && <p className="text-sm text-neutral-400">Cargando…</p>}
                 {miPerfil && (
-                  <div className="flex items-center gap-4">
-                    <Initials name={miPerfil.nombre} size="lg" />
-                    <div>
-                      <p className="text-base font-semibold text-neutral-900">{miPerfil.nombre}</p>
-                      <p className="text-sm text-neutral-500">{miPerfil.correo}</p>
-                      <span className="inline-block mt-1.5 px-2 py-0.5 rounded text-xs font-medium bg-neutral-200 text-neutral-700 capitalize">{miPerfil.rol}</span>
+                  <div>
+                    <div className="flex items-center gap-4 mb-6">
+                      <Initials name={`${miPerfil.nombre} ${miPerfil.apellido_paterno ?? ''}`} size="lg" />
+                      <div>
+                        <p className="text-base font-semibold text-neutral-900">{miPerfil.nombre}</p>
+                        <span className="inline-block mt-1.5 px-2 py-0.5 rounded text-xs font-medium bg-neutral-200 text-neutral-700 capitalize">{miPerfil.rol}</span>
+                      </div>
+                    </div>
+                    <div className="space-y-3 text-sm">
+                      <div><p className="text-xs text-neutral-400">Apellido paterno</p><p className="text-neutral-800">{miPerfil.apellido_paterno || '—'}</p></div>
+                      <div><p className="text-xs text-neutral-400">Apellido materno</p><p className="text-neutral-800">{miPerfil.apellido_materno || '—'}</p></div>
+                      <div><p className="text-xs text-neutral-400">Teléfono</p><p className="text-neutral-800">{miPerfil.telefono || '—'}</p></div>
+                      <div><p className="text-xs text-neutral-400">Correo electrónico</p><p className="text-neutral-800">{miPerfil.correo}</p></div>
                     </div>
                   </div>
                 )}
               </div>
+            </div>
+          )}
+
+          {screen === 'settings' && (
+            <div className="p-6 max-w-4xl">
+              <h1 className="text-xl font-semibold text-neutral-900">Configuración</h1>
+              <p className="text-sm text-neutral-500 mt-1 mb-7">Perfil y seguridad de tu cuenta</p>
+
+              <div className="bg-white rounded-lg border border-neutral-200 p-6 mb-6">
+                <h2 className="text-lg font-semibold text-cyan-900 mb-6">Información de perfil</h2>
+                <div className="flex items-center gap-4 mb-7">
+                  <Initials name={settingsName || miPerfil?.nombre || 'Usuario'} size="lg" />
+                  <div>
+                    <p className="text-lg font-semibold text-neutral-900">{settingsName || miPerfil?.nombre || 'Usuario'}</p>
+                    <p className="text-sm text-neutral-500">{settingsEmail || miPerfil?.correo || ''}</p>
+                    {miPerfil && <span className="inline-block mt-1.5 px-2 py-0.5 rounded text-xs font-medium bg-cyan-100 text-cyan-800 capitalize">{miPerfil.rol === 'admin' ? 'Administrador' : 'Usuario'}</span>}
+                  </div>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                  <label className="block text-sm font-medium text-neutral-700">
+                    Nombre completo
+                    <input value={settingsName} onChange={e => setSettingsName(e.target.value)} className="mt-2 w-full border border-cyan-200 rounded-lg px-4 py-3 text-base outline-none focus:border-cyan-600 focus:ring-1 focus:ring-cyan-600" />
+                  </label>
+                  <label className="block text-sm font-medium text-neutral-700">
+                    Correo electrónico
+                    <input type="email" value={settingsEmail} onChange={e => setSettingsEmail(e.target.value)} className="mt-2 w-full border border-cyan-200 rounded-lg px-4 py-3 text-base outline-none focus:border-cyan-600 focus:ring-1 focus:ring-cyan-600" />
+                  </label>
+                </div>
+                <button onClick={handleSaveProfile} className="mt-6 bg-cyan-700 text-white rounded-lg px-5 py-3 text-sm font-medium hover:bg-cyan-800 transition-colors">Guardar cambios</button>
+              </div>
+
+              <div className="bg-white rounded-lg border border-neutral-200 p-6">
+                <h2 className="text-lg font-semibold text-cyan-900 mb-6">Cambiar contraseña</h2>
+                <div className="space-y-5">
+                  <label className="block text-sm font-medium text-neutral-700">
+                    Contraseña actual
+                    <input type="password" value={passwordForm.passwordActual} onChange={e => setPasswordForm({ ...passwordForm, passwordActual: e.target.value })} className="mt-2 w-full border border-cyan-200 rounded-lg px-4 py-3 text-base outline-none focus:border-cyan-600 focus:ring-1 focus:ring-cyan-600" />
+                  </label>
+                  <label className="block text-sm font-medium text-neutral-700">
+                    Nueva contraseña
+                    <input type="password" value={passwordForm.passwordNueva} onChange={e => setPasswordForm({ ...passwordForm, passwordNueva: e.target.value })} placeholder="Mín. 8 caracteres con mayúscula, número y especial" className="mt-2 w-full border border-cyan-200 rounded-lg px-4 py-3 text-base outline-none focus:border-cyan-600 focus:ring-1 focus:ring-cyan-600 placeholder:text-neutral-300" />
+                  </label>
+                  <label className="block text-sm font-medium text-neutral-700">
+                    Confirmar nueva contraseña
+                    <input type="password" value={passwordForm.confirmacion} onChange={e => setPasswordForm({ ...passwordForm, confirmacion: e.target.value })} className="mt-2 w-full border border-cyan-200 rounded-lg px-4 py-3 text-base outline-none focus:border-cyan-600 focus:ring-1 focus:ring-cyan-600" />
+                  </label>
+                </div>
+                <button onClick={handleChangePassword} className="mt-6 bg-cyan-700 text-white rounded-lg px-5 py-3 text-sm font-medium hover:bg-cyan-800 transition-colors">Actualizar contraseña</button>
+              </div>
+              {(settingsMessage || settingsError) && <p className={`mt-4 text-sm ${settingsError ? 'text-red-600' : 'text-emerald-600'}`}>{settingsError || settingsMessage}</p>}
             </div>
           )}
 

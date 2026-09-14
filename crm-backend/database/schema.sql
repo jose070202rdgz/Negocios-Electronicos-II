@@ -4,7 +4,10 @@ USE crm_db;
 CREATE TABLE IF NOT EXISTS usuarios (
   id INT AUTO_INCREMENT PRIMARY KEY,
   nombre VARCHAR(150) NOT NULL,
+  apellido_paterno VARCHAR(80) NOT NULL DEFAULT '',
+  apellido_materno VARCHAR(80) NOT NULL DEFAULT '',
   correo VARCHAR(150) NOT NULL UNIQUE,
+  telefono VARCHAR(10) NOT NULL DEFAULT '',
   password_hash VARCHAR(255) NOT NULL,
   rol ENUM('admin', 'usuario') NOT NULL DEFAULT 'usuario',
   createdAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,

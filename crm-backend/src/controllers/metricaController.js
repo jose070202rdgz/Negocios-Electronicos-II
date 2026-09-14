@@ -14,6 +14,11 @@ async function obtenerMetricas(req, res) {
       order: [[fn('COUNT', col('Interaccion.id')), 'DESC']],
     });
 
+    const interaccionesPorTipo = await Interaccion.findAll({
+      attributes: ['tipo', [fn('COUNT', col('id')), 'total']],
+      group: ['tipo'],
+    });
+
     const hace30Dias = new Date();
     hace30Dias.setDate(hace30Dias.getDate() - 30);
 
@@ -41,6 +46,7 @@ async function obtenerMetricas(req, res) {
       clientes_activos: clientesActivos,
       clientes_inactivos: clientesInactivos,
       interacciones_por_cliente: interaccionesPorCliente,
+      interacciones_por_tipo: interaccionesPorTipo,
       clientes_sin_interaccion_reciente: clientesEnRiesgo,
     });
   } catch (err) {

@@ -67,4 +67,21 @@ async function listarTodasLasInteracciones(req, res) {
   }
 }
 
-module.exports = { crearInteraccion, listarInteraccionesPorCliente, listarTodasLasInteracciones };
+async function listarMisInteracciones(req, res) {
+  try {
+    const interacciones = await Interaccion.findAll({
+      where: { usuario_id: req.usuario.id },
+      include: [
+        { model: Cliente, as: 'cliente', attributes: ['id', 'nombre', 'empresa'] },
+        { model: Usuario, as: 'usuario', attributes: ['id', 'nombre', 'correo'] },
+      ],
+      order: [['fecha', 'DESC']],
+    });
+
+    return res.json(interacciones);
+  } catch (err) {
+    return res.status(500).json({ error: 'Error al listar tu historial de interacciones', detalle: err.message });
+  }
+}
+
+module.exports = { crearInteraccion, listarInteraccionesPorCliente, listarTodasLasInteracciones, listarMisInteracciones };

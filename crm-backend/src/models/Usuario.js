@@ -11,6 +11,21 @@ const Usuario = sequelize.define('Usuario', {
     type: DataTypes.STRING(150),
     allowNull: false,
   },
+  apellido_paterno: {
+    type: DataTypes.STRING(80),
+    allowNull: false,
+    defaultValue: '',
+  },
+  apellido_materno: {
+    type: DataTypes.STRING(80),
+    allowNull: false,
+    defaultValue: '',
+  },
+  telefono: {
+    type: DataTypes.STRING(10),
+    allowNull: false,
+    defaultValue: '',
+  },
   correo: {
     type: DataTypes.STRING(150),
     allowNull: false,

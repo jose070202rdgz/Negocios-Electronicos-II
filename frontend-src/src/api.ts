@@ -24,8 +24,15 @@ export function getStoredUsuario(): UsuarioSesion | null {
 export interface UsuarioSesion {
   id: number;
   nombre: string;
+  apellido_paterno?: string;
+  apellido_materno?: string;
+  telefono?: string;
   correo: string;
   rol: 'admin' | 'usuario';
+}
+
+export interface UsuarioRegistrado extends UsuarioSesion {
+  createdAt: string;
 }
 
 export interface Cliente {
@@ -55,6 +62,7 @@ export interface Metricas {
   total_clientes: number;
   clientes_activos: number;
   clientes_inactivos: number;
+  interacciones_por_tipo: Array<{ tipo: 'llamada' | 'correo' | 'reunion'; total: string }>;
   interacciones_por_cliente: Array<{
     cliente_id: number;
     total_interacciones: string;
@@ -100,7 +108,7 @@ export const api = {
       method: 'POST',
       body: JSON.stringify({ correo, password }),
     }),
-  register: (payload: { nombre: string; correo: string; password: string; rol?: string }) =>
+  register: (payload: { nombre: string; apellido_paterno: string; apellido_materno: string; correo: string; telefono: string; password: string; rol?: string }) =>
     request<UsuarioSesion>('/auth/register', { method: 'POST', body: JSON.stringify(payload) }),
 
   getClientes: (params: { busqueda?: string; estado?: string; etapa_crm?: string } = {}) => {
@@ -122,9 +130,14 @@ export const api = {
     request<Interaccion[]>(`/clientes/${clienteId}/interacciones`),
   crearInteraccion: (payload: { cliente_id: number; tipo: string; descripcion: string; fecha?: string }) =>
     request<Interaccion>('/interacciones', { method: 'POST', body: JSON.stringify(payload) }),
-  getMiActividad: () => request<Interaccion[]>('/interacciones'),
+  getMiActividad: () => request<Interaccion[]>('/interacciones/mine'),
 
   getMiPerfil: () => request<UsuarioSesion & { createdAt: string }>('/auth/me'),
+  actualizarPerfil: (payload: { nombre: string; correo: string }) =>
+    request<UsuarioSesion>('/auth/me', { method: 'PUT', body: JSON.stringify(payload) }),
+  actualizarPassword: (payload: { passwordActual: string; passwordNueva: string }) =>
+    request<{ mensaje: string }>('/auth/password', { method: 'PUT', body: JSON.stringify(payload) }),
+  getUsuarios: () => request<UsuarioRegistrado[]>('/auth/users'),
 
   getMetricas: () => request<Metricas>('/metricas'),
 };
