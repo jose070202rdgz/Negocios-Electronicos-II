@@ -9,6 +9,7 @@ import {
   type Cliente,
   type Interaccion,
   type Metricas,
+  type Producto,
   type UsuarioRegistrado,
   type UsuarioSesion,
 } from './api';
@@ -25,7 +26,8 @@ type Screen =
   | 'settings'
   | 'my-activity'
   | 'my-profile'
-  | 'reports';
+  | 'reports'
+  | 'catalog';
 
 const ETAPAS = ['Prospecto', 'Activo', 'Frecuente', 'Inactivo'];
 
@@ -34,6 +36,7 @@ const TIPO_LABEL: Record<string, string> = { llamada: 'Llamada', correo: 'Correo
 const TIPO_VALUE: Record<string, string> = { Llamada: 'llamada', Correo: 'correo', Reunión: 'reunion' };
 
 const IcoGrid  = () => <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}><rect x={3} y={3} width={7} height={7} rx={1}/><rect x={14} y={3} width={7} height={7} rx={1}/><rect x={3} y={14} width={7} height={7} rx={1}/><rect x={14} y={14} width={7} height={7} rx={1}/></svg>;
+const IcoBox = () => <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}><path strokeLinecap="round" strokeLinejoin="round" d="M21 16V8a2 2 0 00-1-1.73l-7-4a2 2 0 00-2 0l-7 4A2 2 0 003 8v8a2 2 0 001 1.73l7 4a2 2 0 002 0l7-4A2 2 0 0021 16z"/><path strokeLinecap="round" strokeLinejoin="round" d="M3.27 6.96L12 12.01l8.73-5.05M12 22.08V12"/></svg>;
 const IcoUsers = () => <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}><path strokeLinecap="round" strokeLinejoin="round" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"/></svg>;
 const IcoChat  = () => <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}><path strokeLinecap="round" strokeLinejoin="round" d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z"/></svg>;
 const IcoStar  = () => <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}><path strokeLinecap="round" strokeLinejoin="round" d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z"/></svg>;
@@ -188,6 +191,7 @@ function InteractionBarChart({ data }: { data: Metricas['interacciones_por_tipo'
 }
 
 const NAV = [
+  { label: 'Catálogo',     screen: 'catalog'              as Screen, Icon: IcoBox,   soloAdmin: false },
   { label: 'Dashboard',    screen: 'dashboard'           as Screen, Icon: IcoGrid,   soloAdmin: true  },
   { label: 'Clientes',     screen: 'clients'             as Screen, Icon: IcoUsers,  soloAdmin: true  },
   { label: 'Interacciones',screen: 'interaction-history' as Screen, Icon: IcoChat,   soloAdmin: true  },
@@ -235,6 +239,7 @@ function Sidebar({ screen, setScreen, esAdmin }: { screen: Screen; setScreen: (s
 function TopNav({ screen, setScreen, usuario, onLogout }: { screen: Screen; setScreen: (s: Screen) => void; usuario: UsuarioSesion | null; onLogout: () => void }) {
   const esAdmin = usuario?.rol === 'admin';
   const tabs = [
+    { label: 'Catálogo',     s: 'catalog'              as Screen, soloAdmin: false },
     { label: 'Dashboard',    s: 'dashboard'           as Screen, soloAdmin: true },
     { label: 'Clientes',     s: 'clients'             as Screen, soloAdmin: true },
     { label: 'Interacciones',s: 'interaction-history' as Screen, soloAdmin: true },
@@ -330,6 +335,15 @@ export default function App() {
   const [usuarios, setUsuarios] = useState<UsuarioRegistrado[]>([]);
   const [usuariosLoading, setUsuariosLoading] = useState(false);
 
+  const [productos, setProductos] = useState<Producto[]>([]);
+  const [productosLoading, setProductosLoading] = useState(false);
+  const [catalogSearch, setCatalogSearch] = useState('');
+  const [catalogCategory, setCatalogCategory] = useState('');
+  const [showProductModal, setShowProductModal] = useState(false);
+  const [editingProduct, setEditingProduct] = useState<Producto | null>(null);
+  const [productForm, setProductForm] = useState({ nombre: '', categoria: 'Limpieza industrial', presentacion: '', descripcion: '', precio: '', imagen: '', etiquetas: '' });
+  const [productFormError, setProductFormError] = useState('');
+
   const [globalError, setGlobalError] = useState('');
 
   async function reloadClientes() {
@@ -406,6 +420,17 @@ export default function App() {
     }
   }
 
+  async function reloadProductos() {
+    setProductosLoading(true);
+    try {
+      setProductos(await api.getProductos({ busqueda: catalogSearch, categoria: catalogCategory }));
+    } catch (err) {
+      setGlobalError(err instanceof ApiError ? err.message : 'No se pudo cargar el catálogo');
+    } finally {
+      setProductosLoading(false);
+    }
+  }
+
   async function handleSaveProfile() {
     setSettingsError('');
     setSettingsMessage('');
@@ -465,6 +490,10 @@ export default function App() {
   useEffect(() => {
     if (screen === 'users' && usuario?.rol === 'admin') reloadUsuarios();
   }, [screen, usuario]);
+
+  useEffect(() => {
+    if (screen === 'catalog' && usuario) reloadProductos();
+  }, [screen, catalogSearch, catalogCategory, usuario]);
 
   function openClient(c: Cliente) {
     setSelectedClient(c);
@@ -531,6 +560,46 @@ export default function App() {
     setClientForm({ nombre: '', correo: '', telefono: '', empresa: '', estado: 'activo' });
     setClientFormError('');
     setShowClientModal(true);
+  }
+
+  function openNewProductModal() {
+    setEditingProduct(null);
+    setProductForm({ nombre: '', categoria: 'Limpieza industrial', presentacion: '', descripcion: '', precio: '', imagen: '', etiquetas: '' });
+    setProductFormError('');
+    setShowProductModal(true);
+  }
+
+  function openEditProductModal(producto: Producto) {
+    setEditingProduct(producto);
+    setProductForm({ nombre: producto.nombre, categoria: producto.categoria, presentacion: producto.presentacion, descripcion: producto.descripcion, precio: String(producto.precio), imagen: producto.imagen ?? '', etiquetas: producto.etiquetas.join(', ') });
+    setProductFormError('');
+    setShowProductModal(true);
+  }
+
+  async function handleSaveProduct() {
+    if (!productForm.nombre.trim() || !productForm.presentacion.trim() || !productForm.descripcion.trim() || !productForm.precio) {
+      setProductFormError('Completa nombre, presentación, descripción y precio');
+      return;
+    }
+    try {
+      const payload = { ...productForm, precio: Number(productForm.precio), etiquetas: productForm.etiquetas };
+      if (editingProduct) await api.actualizarProducto(editingProduct.id, payload);
+      else await api.crearProducto(payload);
+      setShowProductModal(false);
+      reloadProductos();
+    } catch (err) {
+      setProductFormError(err instanceof ApiError ? err.message : 'No se pudo guardar el producto');
+    }
+  }
+
+  async function handleDeleteProduct(producto: Producto) {
+    if (!window.confirm(`¿Ocultar ${producto.nombre} del catálogo?`)) return;
+    try {
+      await api.eliminarProducto(producto.id);
+      reloadProductos();
+    } catch (err) {
+      setGlobalError(err instanceof ApiError ? err.message : 'No se pudo ocultar el producto');
+    }
   }
 
   function openEditClientModal(c: Cliente) {
@@ -737,6 +806,45 @@ export default function App() {
                   </div>
                 </>
               )}
+            </div>
+          )}
+
+          {screen === 'catalog' && (
+            <div className="p-6 max-w-6xl">
+              <div className="flex items-start justify-between mb-6">
+                <div>
+                  <h1 className="text-2xl font-semibold text-neutral-900">Catálogo de productos</h1>
+                  <p className="text-sm text-neutral-500 mt-1">Productos de limpieza y desinfección industrial</p>
+                </div>
+                {usuario?.rol === 'admin' && <button onClick={openNewProductModal} className="bg-neutral-950 text-white text-sm px-4 py-2 rounded-lg hover:bg-neutral-800 transition-colors">+ Nuevo producto</button>}
+              </div>
+              <div className="flex gap-3 mb-5">
+                <input value={catalogSearch} onChange={e => setCatalogSearch(e.target.value)} placeholder="Buscar producto..." className="flex-1 border border-neutral-300 rounded-lg px-3 py-2 text-sm outline-none focus:border-neutral-800 focus:ring-1 focus:ring-neutral-800 placeholder:text-neutral-300" />
+                <select value={catalogCategory} onChange={e => setCatalogCategory(e.target.value)} className="border border-neutral-300 rounded-lg px-3 py-2 text-sm bg-white text-neutral-700 outline-none">
+                  <option value="">Todas las categorías</option>
+                  {[...new Set(productos.map(producto => producto.categoria))].map(categoria => <option key={categoria} value={categoria}>{categoria}</option>)}
+                </select>
+              </div>
+              {productosLoading && <p className="text-sm text-neutral-400 mb-4">Cargando catálogo...</p>}
+              {!productosLoading && productos.length === 0 && <div className="bg-white border border-neutral-200 rounded-lg p-12 text-center text-sm text-neutral-400">No hay productos disponibles.</div>}
+              <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5">
+                {productos.map(producto => (
+                  <article key={producto.id} className="bg-white rounded-xl border border-neutral-200 overflow-hidden shadow-sm flex flex-col">
+                    <div className="h-32 bg-cyan-50 flex items-center justify-center text-6xl">{producto.imagen ? <img src={producto.imagen} alt={producto.nombre} className="h-full w-full object-cover" /> : '🧴'}</div>
+                    <div className="p-5 flex flex-col flex-1">
+                      <p className="text-xs text-cyan-700 font-medium mb-1">{producto.categoria}</p>
+                      <h2 className="text-base font-semibold text-cyan-950">{producto.nombre}</h2>
+                      <p className="text-sm text-cyan-700 mt-1">{producto.presentacion}</p>
+                      <p className="text-sm text-neutral-500 leading-relaxed mt-3 flex-1">{producto.descripcion}</p>
+                      <div className="flex flex-wrap gap-1.5 mt-4">{producto.etiquetas.map(etiqueta => <span key={etiqueta} className="rounded-full bg-cyan-50 text-cyan-700 px-2.5 py-1 text-[11px]">{etiqueta}</span>)}</div>
+                      <div className="flex items-end justify-between mt-5 pt-4 border-t border-neutral-100">
+                        <div><p className="text-xl font-bold text-cyan-950">${Number(producto.precio).toFixed(2)}</p><p className="text-xs text-neutral-400">por {producto.presentacion}</p></div>
+                        {usuario?.rol === 'admin' && <div className="flex gap-2"><button onClick={() => openEditProductModal(producto)} className="text-xs text-neutral-600 underline">Editar</button><button onClick={() => handleDeleteProduct(producto)} className="text-xs text-red-500 underline">Ocultar</button></div>}
+                      </div>
+                    </div>
+                  </article>
+                ))}
+              </div>
             </div>
           )}
 
@@ -1148,6 +1256,39 @@ export default function App() {
 
         </main>
       </div>
+
+      {showProductModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50" onClick={e => { if (e.target === e.currentTarget) setShowProductModal(false); }}>
+          <div className="bg-white rounded-xl shadow-2xl w-full max-w-lg mx-4 max-h-[90vh] overflow-auto">
+            <div className="flex items-center justify-between px-5 py-4 border-b border-neutral-200">
+              <h2 className="text-base font-semibold text-neutral-900">{editingProduct ? 'Editar producto' : 'Nuevo producto'}</h2>
+              <button onClick={() => setShowProductModal(false)} className="text-neutral-400 hover:text-neutral-700 transition-colors"><IcoX /></button>
+            </div>
+            <div className="p-5 space-y-4">
+              {([
+                ['nombre', 'Nombre del producto', 'Ej. Detergente Industrial BrilloMax Pro'],
+                ['categoria', 'Categoría', 'Limpieza industrial'],
+                ['presentacion', 'Presentación', 'Cubeta 20L'],
+                ['precio', 'Precio', '349.00'],
+                ['imagen', 'URL de imagen (opcional)', 'https://...'],
+                ['etiquetas', 'Etiquetas', 'Desengrasante, Biodegradable'],
+              ] as const).map(([key, label, placeholder]) => (
+                <label key={key} className="block text-xs font-medium text-neutral-700">{label}
+                  <input type={key === 'precio' ? 'number' : 'text'} min={key === 'precio' ? '0' : undefined} step={key === 'precio' ? '0.01' : undefined} value={productForm[key]} onChange={e => setProductForm(form => ({ ...form, [key]: e.target.value }))} placeholder={placeholder} className="mt-1.5 w-full border border-neutral-300 rounded-lg px-3 py-2 text-sm outline-none focus:border-neutral-800 focus:ring-1 focus:ring-neutral-800 placeholder:text-neutral-300" />
+                </label>
+              ))}
+              <label className="block text-xs font-medium text-neutral-700">Descripción
+                <textarea value={productForm.descripcion} onChange={e => setProductForm(form => ({ ...form, descripcion: e.target.value }))} rows={3} placeholder="Describe el uso y beneficios del producto" className="mt-1.5 w-full border border-neutral-300 rounded-lg px-3 py-2 text-sm outline-none focus:border-neutral-800 focus:ring-1 focus:ring-neutral-800 resize-none placeholder:text-neutral-300" />
+              </label>
+              {productFormError && <p className="text-xs text-red-600">{productFormError}</p>}
+            </div>
+            <div className="flex gap-2 px-5 pb-5">
+              <button onClick={() => setShowProductModal(false)} className="flex-1 py-2 text-sm border border-neutral-300 rounded-lg hover:bg-neutral-50 text-neutral-700 transition-colors">Cancelar</button>
+              <button onClick={handleSaveProduct} className="flex-1 py-2 text-sm bg-neutral-950 text-white rounded-lg hover:bg-neutral-800 transition-colors">Guardar</button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {showClientModal && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50" onClick={e => { if (e.target === e.currentTarget) setShowClientModal(false); }}>

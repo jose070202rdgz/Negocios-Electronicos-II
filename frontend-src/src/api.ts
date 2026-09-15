@@ -58,6 +58,18 @@ export interface Interaccion {
   cliente?: { id: number; nombre: string; empresa: string | null };
 }
 
+export interface Producto {
+  id: number;
+  nombre: string;
+  categoria: string;
+  presentacion: string;
+  descripcion: string;
+  precio: number | string;
+  imagen: string | null;
+  etiquetas: string[];
+  activo: boolean;
+}
+
 export interface Metricas {
   total_clientes: number;
   clientes_activos: number;
@@ -140,6 +152,16 @@ export const api = {
   getUsuarios: () => request<UsuarioRegistrado[]>('/auth/users'),
 
   getMetricas: () => request<Metricas>('/metricas'),
+
+  getProductos: (params: { busqueda?: string; categoria?: string } = {}) => {
+    const query = new URLSearchParams(Object.entries(params).filter(([, value]) => value) as [string, string][]).toString();
+    return request<Producto[]>(`/productos${query ? `?${query}` : ''}`);
+  },
+  crearProducto: (payload: Omit<Producto, 'id' | 'activo' | 'imagen' | 'etiquetas'> & { imagen?: string | null; etiquetas: string | string[] }) =>
+    request<Producto>('/productos', { method: 'POST', body: JSON.stringify(payload) }),
+  actualizarProducto: (id: number, payload: Partial<Producto>) =>
+    request<Producto>(`/productos/${id}`, { method: 'PUT', body: JSON.stringify(payload) }),
+  eliminarProducto: (id: number) => request<null>(`/productos/${id}`, { method: 'DELETE' }),
 };
 
 export { ApiError };
