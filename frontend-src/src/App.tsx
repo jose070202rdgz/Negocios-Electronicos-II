@@ -27,7 +27,8 @@ type Screen =
   | 'my-activity'
   | 'my-profile'
   | 'reports'
-  | 'catalog';
+  | 'catalog'
+  | 'scm';
 
 const ETAPAS = ['Prospecto', 'Activo', 'Frecuente', 'Inactivo'];
 
@@ -43,6 +44,7 @@ const IcoStar  = () => <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" 
 const IcoPerson = () => <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}><path strokeLinecap="round" strokeLinejoin="round" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/></svg>;
 const IcoClock  = () => <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}><circle cx={12} cy={12} r={9}/><path strokeLinecap="round" strokeLinejoin="round" d="M12 7v5l3 3"/></svg>;
 const IcoGear   = () => <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}><path strokeLinecap="round" strokeLinejoin="round" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/><circle cx={12} cy={12} r={3}/></svg>;
+const IcoTruck = () => <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}><path strokeLinecap="round" strokeLinejoin="round" d="M3 7h11v8H3V7zm11 3h4l3 3v2h-7v-5zM7 18.5a1.5 1.5 0 110-3 1.5 1.5 0 010 3zm11 0a1.5 1.5 0 110-3 1.5 1.5 0 010 3z"/></svg>;
 const IcoPhone  = () => <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"/></svg>;
 const IcoMail   = () => <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>;
 const IcoBack   = () => <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7"/></svg>;
@@ -195,6 +197,7 @@ const NAV = [
   { label: 'Dashboard',    screen: 'dashboard'           as Screen, Icon: IcoGrid,   soloAdmin: true  },
   { label: 'Clientes',     screen: 'clients'             as Screen, Icon: IcoUsers,  soloAdmin: true  },
   { label: 'Interacciones',screen: 'interaction-history' as Screen, Icon: IcoChat,   soloAdmin: true  },
+  { label: 'SCM',          screen: 'scm'                  as Screen, Icon: IcoTruck,  soloAdmin: true  },
   { label: 'Evaluaciones', screen: 'evaluations' as Screen,          Icon: IcoStar,   soloAdmin: true  },
   { label: 'Usuarios',     screen: 'users' as Screen,                Icon: IcoPerson, soloAdmin: true  },
   { label: 'Mi actividad', screen: 'my-activity'         as Screen, Icon: IcoClock,  soloAdmin: false },
@@ -243,6 +246,7 @@ function TopNav({ screen, setScreen, usuario, onLogout }: { screen: Screen; setS
     { label: 'Dashboard',    s: 'dashboard'           as Screen, soloAdmin: true },
     { label: 'Clientes',     s: 'clients'             as Screen, soloAdmin: true },
     { label: 'Interacciones',s: 'interaction-history' as Screen, soloAdmin: true },
+    { label: 'SCM',          s: 'scm'                  as Screen, soloAdmin: true },
     { label: 'Reportes',     s: 'reports'             as Screen, soloAdmin: true },
     { label: 'Mi actividad', s: 'my-activity'         as Screen, soloAdmin: false },
   ].filter(t => esAdmin || !t.soloAdmin);
@@ -339,6 +343,22 @@ export default function App() {
   const [productosLoading, setProductosLoading] = useState(false);
   const [catalogSearch, setCatalogSearch] = useState('');
   const [catalogCategory, setCatalogCategory] = useState('');
+  const scmKpis = [
+    { label: 'Inventario total', value: '4,280', detail: 'unidades', tone: 'bg-cyan-50 text-cyan-800' },
+    { label: 'Pedidos pendientes', value: '18', detail: 'por entregar', tone: 'bg-amber-50 text-amber-700' },
+    { label: 'Proveedores activos', value: '12', detail: 'vinculados', tone: 'bg-emerald-50 text-emerald-700' },
+    { label: 'Rotación', value: '91%', detail: 'eficiencia', tone: 'bg-neutral-900 text-white' },
+  ];
+  const scmOrdenes = [
+    { id: 'PO-1042', proveedor: 'LimpiaMax', producto: 'Detergente industrial', eta: '12 sep', estado: 'En ruta' },
+    { id: 'PO-1048', proveedor: 'Químicos del Norte', producto: 'Desinfectante 20L', eta: '14 sep', estado: 'Confirmado' },
+    { id: 'PO-1051', proveedor: 'EcoClean', producto: 'Guantes nitrilo', eta: '17 sep', estado: 'Pendiente' },
+  ];
+  const scmProveedores = [
+    { nombre: 'LimpiaMax', nivel: 'Crítico', entrega: '2 días', riesgo: 'Bajo' },
+    { nombre: 'QN Solutions', nivel: 'Estable', entrega: '4 días', riesgo: 'Medio' },
+    { nombre: 'EcoClean', nivel: 'Estrategia', entrega: '5 días', riesgo: 'Bajo' },
+  ];
   const [showProductModal, setShowProductModal] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Producto | null>(null);
   const [productForm, setProductForm] = useState({ nombre: '', categoria: 'Limpieza industrial', presentacion: '', descripcion: '', precio: '', imagen: '', etiquetas: '' });
@@ -1023,6 +1043,130 @@ export default function App() {
                 <button className="mt-8 bg-cyan-700 text-white text-base font-medium px-7 py-3 rounded-lg hover:bg-cyan-800 transition-colors">
                   + Nueva evaluación
                 </button>
+              </div>
+            </div>
+          )}
+
+          {screen === 'scm' && (
+            <div className="p-6 max-w-6xl">
+              <div className="flex items-center justify-between mb-6">
+                <div>
+                  <h1 className="text-xl font-semibold text-neutral-900">SCM y logística</h1>
+                  <p className="text-sm text-neutral-500 mt-1">Control de inventario, proveedores y entregas</p>
+                </div>
+                <button className="bg-neutral-950 text-white text-sm px-4 py-2 rounded-lg hover:bg-neutral-800 transition-colors">+ Nuevo pedido</button>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4 mb-6">
+                {scmKpis.map(item => (
+                  <div key={item.label} className="bg-white rounded-xl border border-neutral-200 p-4 shadow-sm">
+                    <div className={`inline-flex rounded-full px-2.5 py-1 text-[11px] font-medium ${item.tone}`}>{item.label}</div>
+                    <div className="mt-4 text-3xl font-bold text-neutral-900">{item.value}</div>
+                    <div className="mt-1 text-xs text-neutral-500">{item.detail}</div>
+                  </div>
+                ))}
+              </div>
+
+              <div className="grid grid-cols-1 xl:grid-cols-[1.3fr_0.7fr] gap-5">
+                <div className="bg-white rounded-xl border border-neutral-200 overflow-hidden">
+                  <div className="px-5 py-4 border-b border-neutral-200 flex items-center justify-between">
+                    <h2 className="text-sm font-semibold text-neutral-800">Pedidos por entregar</h2>
+                    <span className="text-xs text-neutral-500">Últimos 3</span>
+                  </div>
+                  <div className="divide-y divide-neutral-100">
+                    {scmOrdenes.map(order => (
+                      <div key={order.id} className="px-5 py-4 flex items-center justify-between gap-4">
+                        <div>
+                          <div className="text-sm font-medium text-neutral-900">{order.id}</div>
+                          <div className="text-xs text-neutral-500 mt-1">{order.producto} · {order.proveedor}</div>
+                        </div>
+                        <div className="text-right">
+                          <div className="text-xs font-medium text-neutral-500">ETA</div>
+                          <div className="text-sm text-neutral-800">{order.eta}</div>
+                        </div>
+                        <span className="inline-flex rounded-full bg-neutral-100 text-neutral-700 px-2.5 py-1 text-[11px] font-medium">{order.estado}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="bg-white rounded-xl border border-neutral-200 p-5">
+                  <h2 className="text-sm font-semibold text-neutral-800 mb-4">Proveedores clave</h2>
+                  <div className="space-y-3">
+                    {scmProveedores.map(prov => (
+                      <div key={prov.nombre} className="rounded-lg bg-neutral-50 border border-neutral-200 p-3">
+                        <div className="flex items-center justify-between mb-2">
+                          <span className="text-sm font-medium text-neutral-800">{prov.nombre}</span>
+                          <span className="text-[11px] px-2 py-1 rounded-full bg-cyan-100 text-cyan-800">{prov.nivel}</span>
+                        </div>
+                        <div className="text-xs text-neutral-500">Entrega: {prov.entrega}</div>
+                        <div className="text-xs text-neutral-500 mt-1">Riesgo: {prov.riesgo}</div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {screen === 'scm' && (
+            <div className="p-6 max-w-6xl">
+              <div className="flex items-center justify-between mb-6">
+                <div>
+                  <h1 className="text-xl font-semibold text-neutral-900">SCM y logística</h1>
+                  <p className="text-sm text-neutral-500 mt-1">Control de inventario, proveedores y entregas</p>
+                </div>
+                <button className="bg-neutral-950 text-white text-sm px-4 py-2 rounded-lg hover:bg-neutral-800 transition-colors">+ Nuevo pedido</button>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4 mb-6">
+                {scmKpis.map(item => (
+                  <div key={item.label} className="bg-white rounded-xl border border-neutral-200 p-4 shadow-sm">
+                    <div className={`inline-flex rounded-full px-2.5 py-1 text-[11px] font-medium ${item.tone}`}>{item.label}</div>
+                    <div className="mt-4 text-3xl font-bold text-neutral-900">{item.value}</div>
+                    <div className="mt-1 text-xs text-neutral-500">{item.detail}</div>
+                  </div>
+                ))}
+              </div>
+
+              <div className="grid grid-cols-1 xl:grid-cols-[1.3fr_0.7fr] gap-5">
+                <div className="bg-white rounded-xl border border-neutral-200 overflow-hidden">
+                  <div className="px-5 py-4 border-b border-neutral-200 flex items-center justify-between">
+                    <h2 className="text-sm font-semibold text-neutral-800">Pedidos por entregar</h2>
+                    <span className="text-xs text-neutral-500">Últimos 3</span>
+                  </div>
+                  <div className="divide-y divide-neutral-100">
+                    {scmOrdenes.map(order => (
+                      <div key={order.id} className="px-5 py-4 flex items-center justify-between gap-4">
+                        <div>
+                          <div className="text-sm font-medium text-neutral-900">{order.id}</div>
+                          <div className="text-xs text-neutral-500 mt-1">{order.producto} · {order.proveedor}</div>
+                        </div>
+                        <div className="text-right">
+                          <div className="text-xs font-medium text-neutral-500">ETA</div>
+                          <div className="text-sm text-neutral-800">{order.eta}</div>
+                        </div>
+                        <span className="inline-flex rounded-full bg-neutral-100 text-neutral-700 px-2.5 py-1 text-[11px] font-medium">{order.estado}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="bg-white rounded-xl border border-neutral-200 p-5">
+                  <h2 className="text-sm font-semibold text-neutral-800 mb-4">Proveedores clave</h2>
+                  <div className="space-y-3">
+                    {scmProveedores.map(prov => (
+                      <div key={prov.nombre} className="rounded-lg bg-neutral-50 border border-neutral-200 p-3">
+                        <div className="flex items-center justify-between mb-2">
+                          <span className="text-sm font-medium text-neutral-800">{prov.nombre}</span>
+                          <span className="text-[11px] px-2 py-1 rounded-full bg-cyan-100 text-cyan-800">{prov.nivel}</span>
+                        </div>
+                        <div className="text-xs text-neutral-500">Entrega: {prov.entrega}</div>
+                        <div className="text-xs text-neutral-500 mt-1">Riesgo: {prov.riesgo}</div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
               </div>
             </div>
           )}
