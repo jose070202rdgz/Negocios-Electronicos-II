@@ -1,9 +1,11 @@
 const express = require('express');
 const router = express.Router();
 const { verificarToken, verificarRol } = require('../middleware/auth');
-const { obtenerMetricas } = require('../controllers/metricaController');
+const { crearMovimiento, listarMovimientos } = require('../controllers/movimientoController');
 
 router.use(verificarToken, verificarRol('admin'));
-router.get('/', obtenerMetricas);
+
+router.post('/', crearMovimiento);
+router.get('/', listarMovimientos);
 
 module.exports = router;

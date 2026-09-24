@@ -1,6 +1,7 @@
-# CRM Backend
+# CRM + SCM Backend
 
-API REST del sistema CRM: clientes, interacciones, usuarios (auth con roles) y métricas.
+API REST del sistema: CRM (clientes, interacciones, usuarios) + módulo SCM
+(productos, proveedores, inventario, pedidos, métricas, madurez).
 
 ## Stack
 
@@ -8,130 +9,71 @@ API REST del sistema CRM: clientes, interacciones, usuarios (auth con roles) y m
 - Sequelize (ORM) + MySQL
 - JWT para autenticación, bcrypt para contraseñas
 
-## 1. Requisitos previos
-
-- Node.js instalado (v18+)
-- MySQL instalado (puedes usar **XAMPP** si quieres algo simple con interfaz gráfica, o MySQL Workbench)
-
-## 2. Instalación
-
-Abre esta carpeta en VS Code, luego en la terminal integrada:
+## Instalación
 
 ```bash
 npm install
+cp .env.example .env     # ajusta usuario/contraseña de tu MySQL
 ```
 
-## 3. Configurar variables de entorno
-
-Copia `.env.example` a `.env`:
-
-```bash
-cp .env.example .env
-```
-
-Edita `.env` con los datos de tu MySQL local (usuario, password, nombre de la BD).
-Luego crea la base de datos vacía en MySQL:
-
-```sql
-CREATE DATABASE crm_db;
-```
-
-(No necesitas correr `schema.sql` a mano: Sequelize crea las tablas automáticamente
-al iniciar el servidor gracias a `sequelize.sync()`. El archivo `database/schema.sql`
-solo queda como referencia/documentación.)
-
-## 4. Levantar el servidor
+Crea la base de datos vacía en MySQL (por ejemplo desde phpMyAdmin): `CREATE DATABASE crm_db;`
+Las tablas las crea Sequelize automáticamente al iniciar.
 
 ```bash
 npm run dev
 ```
 
-Deberías ver:
+## Permisos
 
-```
-✅ Conexión a la base de datos establecida.
-✅ Modelos sincronizados con la base de datos.
-🚀 Servidor CRM corriendo en http://localhost:4000
-```
+**Todo el módulo SCM es exclusivo del rol `admin`** (igual que Clientes,
+Interacciones y Métricas del CRM). El rol `usuario` solo tiene acceso a
+`/auth/me` y `/interacciones/mias`. Si más adelante quieres que el rol
+`usuario` vea, por ejemplo, el inventario en modo lectura, es un cambio
+pequeño (agregar la ruta a la lista de excepciones en `routes/`).
 
-## 5. Probar la API (con Postman, Thunder Client o curl)
+## Endpoints — CRM
 
-### Registrar un usuario admin
+| Método | Ruta | Descripción | Rol |
+|---|---|---|---|
+| POST | /auth/register | Crear usuario | — |
+| POST | /auth/login | Iniciar sesión | — |
+| GET | /auth/me | Mi perfil | cualquiera |
+| POST/GET | /clientes | Crear / listar clientes | admin |
+| GET/PUT/DELETE | /clientes/:id | Detalle / editar / eliminar | admin |
+| PUT | /clientes/:id/etapa | Cambiar etapa CRM | admin |
+| GET | /clientes/:id/interacciones | Historial del cliente | admin |
+| POST | /interacciones | Registrar interacción | admin |
+| GET | /interacciones/mias | Mi actividad | cualquiera |
+| GET | /metricas | Métricas del CRM | admin |
 
-```
-POST http://localhost:4000/auth/register
-Body: { "nombre": "Jose", "correo": "jose@crm.com", "password": "123456", "rol": "admin" }
-```
+## Endpoints — SCM (nuevo)
 
-### Iniciar sesión (te devuelve un token)
+| Método | Ruta | Descripción |
+|---|---|---|
+| POST/GET | /proveedores | Crear / listar proveedores (`?busqueda=`) |
+| GET/PUT/DELETE | /proveedores/:id | Detalle / editar / eliminar |
+| POST/GET | /productos | Crear / listar productos (`?busqueda=&categoria=&estrategia_logistica=`) |
+| GET/PUT/DELETE | /productos/:id | Detalle / editar / eliminar |
+| PUT | /productos/:id/estrategia | Cambiar PUSH/PULL |
+| POST/GET | /movimientos | Registrar / listar movimientos (`?tipo=&producto_id=`) — ajusta el stock automáticamente |
+| POST/GET | /pedidos | Crear / listar pedidos (`?estado=&tipo=`) — folio autogenerado `PC-001`, `PC-002`... |
+| PUT | /pedidos/:id | Editar cantidad/tipo/notas |
+| PUT | /pedidos/:id/estado | Cambiar estado (pendiente/en_proceso/surtido/cancelado) |
+| DELETE | /pedidos/:id | Eliminar |
+| GET | /scm/metricas | Dashboard SCM: totales, stock bajo, más vendidos, rotación, push vs pull |
+| GET/PUT | /scm/madurez | Checklist y nivel de madurez SCM |
 
-```
-POST http://localhost:4000/auth/login
-Body: { "correo": "jose@crm.com", "password": "123456" }
-```
+### Notas sobre las métricas SCM
 
-Copia el `token` de la respuesta. En todas las siguientes peticiones agrega el header:
+- **Rotación de inventario**: se calcula por producto como `salidas / (stock_actual + salidas)`.
+  Es una definición simplificada y ajustable — te la señalo por si tu profesor pide una fórmula distinta.
+- **Comparativa PUSH vs PULL mensual** (la gráfica de barras por mes del diseño): no está incluida
+  todavía porque requiere guardar un histórico mensual que el modelo actual no lleva. Si la necesitas,
+  es un módulo adicional pequeño (una tabla de snapshots mensuales).
+- **stock_actual de un producto NO se edita directamente** desde `PUT /productos/:id` — solo cambia
+  a través de `/movimientos`, para que el historial de inventario sea siempre la fuente de verdad.
 
-```
-Authorization: Bearer <token>
-```
+## Siguientes pasos
 
-### Crear un cliente
-
-```
-POST http://localhost:4000/clientes
-Body: { "nombre": "Empresa X", "correo": "contacto@empresax.com", "telefono": "4491234567", "empresa": "Empresa X" }
-```
-
-### Listar clientes (con búsqueda y filtro)
-
-```
-GET http://localhost:4000/clientes?busqueda=empresa&estado=activo&etapa_crm=Prospecto
-```
-
-### Registrar una interacción
-
-```
-POST http://localhost:4000/interacciones
-Body: { "cliente_id": 1, "tipo": "llamada", "descripcion": "Primer contacto" }
-```
-
-### Ver historial de un cliente
-
-```
-GET http://localhost:4000/clientes/1/interacciones
-```
-
-### Cambiar etapa CRM
-
-```
-PUT http://localhost:4000/clientes/1/etapa
-Body: { "etapa_crm": "Activo" }
-```
-
-### Ver métricas
-
-```
-GET http://localhost:4000/metricas
-```
-
-## Endpoints completos
-
-| Método | Ruta                          | Descripción                          | Auth requerida |
-|--------|-------------------------------|---------------------------------------|-----------------|
-| POST   | /auth/register                | Crear usuario                        | No |
-| POST   | /auth/login                   | Iniciar sesión                       | No |
-| POST   | /clientes                     | Crear cliente                        | Sí |
-| GET    | /clientes                     | Listar clientes (busqueda/estado/etapa)| Sí |
-| GET    | /clientes/:id                 | Detalle de cliente                   | Sí |
-| PUT    | /clientes/:id                 | Editar cliente                       | Sí |
-| DELETE | /clientes/:id                 | Eliminar cliente                     | Sí (solo admin) |
-| PUT    | /clientes/:id/etapa           | Cambiar etapa CRM                    | Sí |
-| GET    | /clientes/:id/interacciones   | Historial de interacciones           | Sí |
-| POST   | /interacciones                | Registrar interacción                | Sí |
-| GET    | /metricas                     | Indicadores generales del CRM        | Sí |
-
-## Siguientes pasos (frontend)
-
-Cuando compartas las capturas o el código exportado de tu diseño en Figma, conecto
-estos endpoints directamente a tus formularios, tabla de clientes y dashboard.
+El front-end (14 pantallas del módulo SCM) todavía no está conectado — lo hacemos en la próxima sesión,
+siguiendo el mismo patrón que usamos para el CRM.

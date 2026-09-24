@@ -13,7 +13,7 @@ async function iniciar() {
     console.log('✅ Modelos sincronizados con la base de datos.');
 
     app.listen(PORT, () => {
-      console.log(`🚀 Servidor CRM corriendo en http://localhost:${PORT}`);
+      console.log(`🚀 Servidor CRM + SCM corriendo en http://localhost:${PORT}`);
     });
   } catch (err) {
     console.error('❌ No se pudo iniciar el servidor:', err);

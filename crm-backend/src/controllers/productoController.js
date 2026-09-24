@@ -1,89 +1,127 @@
 const { Op } = require('sequelize');
-const { Producto } = require('../models');
+const { Producto, Proveedor } = require('../models');
 
-function normalizarEtiquetas(etiquetas) {
-  if (Array.isArray(etiquetas)) return etiquetas.filter(Boolean).map(String).slice(0, 6);
-  if (typeof etiquetas === 'string') return etiquetas.split(',').map(etiqueta => etiqueta.trim()).filter(Boolean).slice(0, 6);
-  return [];
-}
-
-async function listarProductos(req, res) {
-  try {
-    const where = { activo: true };
-    if (req.query.busqueda) {
-      where[Op.or] = [
-        { nombre: { [Op.like]: `%${req.query.busqueda}%` } },
-        { categoria: { [Op.like]: `%${req.query.busqueda}%` } },
-        { descripcion: { [Op.like]: `%${req.query.busqueda}%` } },
-      ];
-    }
-    if (req.query.categoria) where.categoria = req.query.categoria;
-
-    const productos = await Producto.findAll({ where, order: [['createdAt', 'DESC']] });
-    return res.json(productos);
-  } catch (err) {
-    return res.status(500).json({ error: 'Error al obtener el catálogo', detalle: err.message });
-  }
-}
-
+// POST /productos
 async function crearProducto(req, res) {
   try {
-    const { nombre, categoria, presentacion, descripcion, precio, imagen, etiquetas } = req.body;
-    if (!nombre?.trim() || !presentacion?.trim() || !descripcion?.trim() || precio === undefined || precio === '') {
-      return res.status(400).json({ error: 'Nombre, presentación, descripción y precio son obligatorios' });
-    }
-    if (Number.isNaN(Number(precio)) || Number(precio) < 0) {
-      return res.status(400).json({ error: 'El precio debe ser un número mayor o igual a cero' });
-    }
+    const { nombre, descripcion, categoria, imagen_url, stock_actual, stock_minimo, costo_unitario, estrategia_logistica, proveedor_id } = req.body;
+    if (!nombre) return res.status(400).json({ error: 'El nombre es obligatorio' });
 
     const producto = await Producto.create({
-      nombre: nombre.trim(),
-      categoria: categoria?.trim() || 'Limpieza industrial',
-      presentacion: presentacion.trim(),
-      descripcion: descripcion.trim(),
-      precio: Number(precio),
-      imagen: imagen?.trim() || null,
-      etiquetas: normalizarEtiquetas(etiquetas),
+      nombre,
+      descripcion,
+      categoria,
+      imagen_url,
+      stock_actual: stock_actual || 0,
+      stock_minimo: stock_minimo || 0,
+      costo_unitario: costo_unitario || 0,
+      estrategia_logistica: estrategia_logistica === 'PULL' ? 'PULL' : 'PUSH',
+      proveedor_id: proveedor_id || null,
     });
+
     return res.status(201).json(producto);
   } catch (err) {
-    return res.status(500).json({ error: 'Error al crear el producto', detalle: err.message });
+    if (err.name === 'SequelizeValidationError') return res.status(400).json({ error: err.errors.map(e => e.message) });
+    return res.status(500).json({ error: 'Error al crear producto', detalle: err.message });
   }
 }
 
+// GET /productos?busqueda=&categoria=&estrategia_logistica=
+async function listarProductos(req, res) {
+  try {
+    const { busqueda, categoria, estrategia_logistica } = req.query;
+    const where = {};
+    if (categoria) where.categoria = categoria;
+    if (estrategia_logistica) where.estrategia_logistica = estrategia_logistica;
+    if (busqueda) where.nombre = { [Op.like]: `%${busqueda}%` };
+
+    const productos = await Producto.findAll({
+      where,
+      include: [{ model: Proveedor, as: 'proveedor', attributes: ['id', 'nombre'] }],
+      order: [['nombre', 'ASC']],
+    });
+
+    // El "estado" de inventario (Normal / Stock bajo) se deriva aquí mismo,
+    // así el front no tiene que repetir esta regla de negocio.
+    const conEstado = productos.map(p => {
+      const json = p.toJSON();
+      json.estado_inventario = json.stock_actual <= json.stock_minimo ? 'Stock bajo' : 'Normal';
+      return json;
+    });
+
+    return res.json(conEstado);
+  } catch (err) {
+    return res.status(500).json({ error: 'Error al listar productos', detalle: err.message });
+  }
+}
+
+// GET /productos/:id
+async function obtenerProducto(req, res) {
+  try {
+    const producto = await Producto.findByPk(req.params.id, {
+      include: [{ model: Proveedor, as: 'proveedor', attributes: ['id', 'nombre'] }],
+    });
+    if (!producto) return res.status(404).json({ error: 'Producto no encontrado' });
+    return res.json(producto);
+  } catch (err) {
+    return res.status(500).json({ error: 'Error al obtener producto', detalle: err.message });
+  }
+}
+
+// PUT /productos/:id
 async function actualizarProducto(req, res) {
   try {
     const producto = await Producto.findByPk(req.params.id);
     if (!producto) return res.status(404).json({ error: 'Producto no encontrado' });
-    const { nombre, categoria, presentacion, descripcion, precio, imagen, etiquetas, activo } = req.body;
-    if (precio !== undefined && (Number.isNaN(Number(precio)) || Number(precio) < 0)) {
-      return res.status(400).json({ error: 'El precio debe ser un número mayor o igual a cero' });
-    }
+
+    const { nombre, descripcion, categoria, imagen_url, stock_minimo, costo_unitario, proveedor_id } = req.body;
+    // stock_actual NO se edita aquí a propósito: solo cambia a través de
+    // /movimientos, para que el historial de inventario sea siempre la
+    // fuente de verdad y nunca quede desincronizado con el stock mostrado.
     await producto.update({
-      ...(nombre !== undefined && { nombre: nombre.trim() }),
-      ...(categoria !== undefined && { categoria: categoria.trim() }),
-      ...(presentacion !== undefined && { presentacion: presentacion.trim() }),
-      ...(descripcion !== undefined && { descripcion: descripcion.trim() }),
-      ...(precio !== undefined && { precio: Number(precio) }),
-      ...(imagen !== undefined && { imagen: imagen?.trim() || null }),
-      ...(etiquetas !== undefined && { etiquetas: normalizarEtiquetas(etiquetas) }),
-      ...(activo !== undefined && { activo: Boolean(activo) }),
+      nombre: nombre ?? producto.nombre,
+      descripcion: descripcion ?? producto.descripcion,
+      categoria: categoria ?? producto.categoria,
+      imagen_url: imagen_url ?? producto.imagen_url,
+      stock_minimo: stock_minimo ?? producto.stock_minimo,
+      costo_unitario: costo_unitario ?? producto.costo_unitario,
+      proveedor_id: proveedor_id ?? producto.proveedor_id,
     });
+
     return res.json(producto);
   } catch (err) {
-    return res.status(500).json({ error: 'Error al actualizar el producto', detalle: err.message });
+    if (err.name === 'SequelizeValidationError') return res.status(400).json({ error: err.errors.map(e => e.message) });
+    return res.status(500).json({ error: 'Error al actualizar producto', detalle: err.message });
   }
 }
 
+// DELETE /productos/:id
 async function eliminarProducto(req, res) {
   try {
     const producto = await Producto.findByPk(req.params.id);
     if (!producto) return res.status(404).json({ error: 'Producto no encontrado' });
-    await producto.update({ activo: false });
+    await producto.destroy();
     return res.status(204).send();
   } catch (err) {
-    return res.status(500).json({ error: 'Error al eliminar el producto', detalle: err.message });
+    return res.status(500).json({ error: 'Error al eliminar producto', detalle: err.message });
   }
 }
 
-module.exports = { listarProductos, crearProducto, actualizarProducto, eliminarProducto };
+// PUT /productos/:id/estrategia — pantalla 9 "Configurar estrategia"
+async function actualizarEstrategia(req, res) {
+  try {
+    const { estrategia_logistica } = req.body;
+    if (!['PUSH', 'PULL'].includes(estrategia_logistica)) {
+      return res.status(400).json({ error: 'estrategia_logistica debe ser PUSH o PULL' });
+    }
+    const producto = await Producto.findByPk(req.params.id);
+    if (!producto) return res.status(404).json({ error: 'Producto no encontrado' });
+    producto.estrategia_logistica = estrategia_logistica;
+    await producto.save();
+    return res.json(producto);
+  } catch (err) {
+    return res.status(500).json({ error: 'Error al actualizar la estrategia', detalle: err.message });
+  }
+}
+
+module.exports = { crearProducto, listarProductos, obtenerProducto, actualizarProducto, eliminarProducto, actualizarEstrategia };
