@@ -6,7 +6,6 @@ async function generarFolio() {
   return `PC-${String(siguiente).padStart(3, '0')}`;
 }
 
-// POST /pedidos
 async function crearPedido(req, res) {
   try {
     const { producto_id, proveedor_id, cantidad, tipo, fecha, notas } = req.body;
@@ -35,7 +34,6 @@ async function crearPedido(req, res) {
   }
 }
 
-// GET /pedidos?estado=&tipo=
 async function listarPedidos(req, res) {
   try {
     const { estado, tipo } = req.query;
@@ -58,7 +56,6 @@ async function listarPedidos(req, res) {
   }
 }
 
-// PUT /pedidos/:id — editar cantidad/tipo/notas
 async function actualizarPedido(req, res) {
   try {
     const pedido = await Pedido.findByPk(req.params.id);
@@ -78,7 +75,6 @@ async function actualizarPedido(req, res) {
   }
 }
 
-// PUT /pedidos/:id/estado — Pendiente → En proceso → Surtido / Cancelado
 async function actualizarEstadoPedido(req, res) {
   try {
     const { estado } = req.body;
@@ -96,7 +92,6 @@ async function actualizarEstadoPedido(req, res) {
   }
 }
 
-// DELETE /pedidos/:id
 async function eliminarPedido(req, res) {
   try {
     const pedido = await Pedido.findByPk(req.params.id);

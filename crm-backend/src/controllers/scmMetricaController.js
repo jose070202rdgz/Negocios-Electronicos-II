@@ -1,7 +1,6 @@
 const { fn, col, Op } = require('sequelize');
 const { Producto, Proveedor, Pedido, MovimientoInventario } = require('../models');
 
-// GET /scm/metricas
 async function obtenerMetricasScm(req, res) {
   try {
     const totalProductos = await Producto.count();
@@ -11,7 +10,6 @@ async function obtenerMetricasScm(req, res) {
     const productos = await Producto.findAll();
     const productosStockBajo = productos.filter(p => p.stock_actual <= p.stock_minimo);
 
-    // Productos más vendidos = suma de salidas de inventario por producto
     const masVendidos = await MovimientoInventario.findAll({
       where: { tipo: 'salida' },
       attributes: ['producto_id', [fn('SUM', col('cantidad')), 'total_vendido']],
@@ -21,9 +19,6 @@ async function obtenerMetricasScm(req, res) {
       limit: 10,
     });
 
-    // Rotación de inventario: qué proporción del stock disponible + vendido
-    // realmente salió (rota) en el histórico. Es una definición simplificada
-    // y ajustable — no sustituye una fórmula financiera formal de rotación.
     let totalSalidas = 0;
     let totalDisponibleMasSalidas = 0;
     const clasificacion = { alta: 0, media: 0, baja: 0 };

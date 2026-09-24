@@ -58,7 +58,6 @@ async function miPerfil(req, res) {
   }
 }
 
-// GET /auth/usuarios — solo admin
 async function listarUsuarios(req, res) {
   try {
     const usuarios = await Usuario.findAll({
@@ -71,7 +70,6 @@ async function listarUsuarios(req, res) {
   }
 }
 
-// PUT /auth/usuarios/:id/estado — activar/desactivar (solo admin, no puede desactivarse a sí mismo)
 async function actualizarEstadoUsuario(req, res) {
   try {
     const { estado } = req.body;
@@ -91,7 +89,6 @@ async function actualizarEstadoUsuario(req, res) {
   }
 }
 
-// PUT /auth/password — cambiar mi propia contraseña
 async function cambiarPassword(req, res) {
   try {
     const { passwordActual, passwordNueva } = req.body;

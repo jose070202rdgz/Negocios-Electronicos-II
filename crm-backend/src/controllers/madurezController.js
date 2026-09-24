@@ -21,7 +21,6 @@ function calcularNivel(fila) {
   return 'Optimizado';
 }
 
-// GET /scm/madurez
 async function obtenerMadurez(req, res) {
   try {
     const fila = await obtenerOCrearFila();
@@ -31,7 +30,6 @@ async function obtenerMadurez(req, res) {
   }
 }
 
-// PUT /scm/madurez — actualiza el checklist
 async function actualizarMadurez(req, res) {
   try {
     const fila = await obtenerOCrearFila();

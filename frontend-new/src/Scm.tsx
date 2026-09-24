@@ -1,6 +1,5 @@
 import { useState } from 'react';
 
-// ── Types ──────────────────────────────────────────────────────────────────────
 interface ScmProducto {
   id: number; nombre: string; categoria: string;
   stock: number; stockMin: number; estrategia: 'PUSH' | 'PULL';
@@ -20,7 +19,6 @@ interface ScmPedido {
   proveedorId: number; notas: string;
 }
 
-// ── Seed Data ──────────────────────────────────────────────────────────────────
 const INIT_PRODUCTOS: ScmProducto[] = [
   { id: 1, nombre: 'Vasija de barro',  categoria: 'Cerámica',   stock: 25, stockMin: 10, estrategia: 'PUSH', costo: 280, proveedorId: 1, emoji: '🏺' },
   { id: 2, nombre: 'Textil bordado',   categoria: 'Textil',     stock: 12, stockMin: 10, estrategia: 'PULL', costo: 450, proveedorId: 2, emoji: '🧶' },
@@ -50,14 +48,12 @@ const INIT_PEDIDOS: ScmPedido[] = [
 const CATEGORIAS = ['Cerámica', 'Textil', 'Decoración', 'Joyería', 'Madera', 'Vidrio'];
 const MOTIVOS    = ['Compra', 'Venta', 'Ajuste', 'Pedido', 'Devolución', 'Merma'];
 
-// ── Mini Icons ─────────────────────────────────────────────────────────────────
 const X    = () => <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>;
 const Pen  = () => <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"/></svg>;
 const Bin  = () => <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>;
 const Eye  = () => <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path strokeLinecap="round" strokeLinejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg>;
 const Chk  = () => <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7"/></svg>;
 
-// ── Shared Micro Components ────────────────────────────────────────────────────
 function EstrategiaBadge({ e }: { e: 'PUSH' | 'PULL' }) {
   return e === 'PUSH'
     ? <span className="px-2 py-0.5 rounded text-[11px] font-bold bg-amber-100 text-amber-700">PUSH</span>
@@ -79,7 +75,6 @@ function StockBadge({ stock, stockMin }: { stock: number; stockMin: number }) {
     : <span className="inline-flex items-center gap-1 text-xs text-red-500 font-medium"><span className="w-2.5 h-2.5 rounded-full bg-red-500 shrink-0" />Stock bajo</span>;
 }
 
-// ── Modal wrapper ──────────────────────────────────────────────────────────────
 function Modal({ title, onClose, children }: { title: string; onClose: () => void; children: React.ReactNode }) {
   return (
     <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50" onClick={e => { if (e.target === e.currentTarget) onClose(); }}>
@@ -104,41 +99,31 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
 }
 const inp = "w-full border border-slate-200 rounded-lg px-3 py-2 text-sm outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 bg-white placeholder:text-slate-300";
 
-// ── Table TH helper ────────────────────────────────────────────────────────────
 function TH({ children }: { children: React.ReactNode }) {
   return <th className="text-left text-xs font-medium text-slate-500 px-4 py-3 whitespace-nowrap">{children}</th>;
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// MAIN MODULE
-// ─────────────────────────────────────────────────────────────────────────────
 export default function ScmModule({ screen, setScreen }: { screen: string; setScreen: (s: string) => void }) {
   const [productos,   setProductos]   = useState<ScmProducto[]>(INIT_PRODUCTOS);
   const [proveedores, setProveedores] = useState<ScmProveedor[]>(INIT_PROVEEDORES);
   const [movimientos, setMovimientos] = useState<ScmMovimiento[]>(INIT_MOVIMIENTOS);
   const [pedidos,     setPedidos]     = useState<ScmPedido[]>(INIT_PEDIDOS);
 
-  // Modals
   const [modal, setModal] = useState<'prod' | 'prov' | 'mov' | 'ped' | null>(null);
   const [editId, setEditId] = useState<number | string | null>(null);
 
-  // Product form
   const emptyProd = { nombre: '', categoria: CATEGORIAS[0], stock: 0, stockMin: 0, estrategia: 'PUSH' as 'PUSH' | 'PULL', costo: 0, proveedorId: 1, emoji: '📦' };
   const [pf, setPf] = useState<typeof emptyProd>(emptyProd);
 
-  // Provider form
   const emptyProv = { nombre: '', contacto: '', correo: '', telefono: '', direccion: '' };
   const [pvf, setPvf] = useState(emptyProv);
 
-  // Movement form
   const emptyMov = { productoId: productos[0]?.id ?? 1, tipo: 'Entrada' as 'Entrada' | 'Salida', cantidad: 0, motivo: MOTIVOS[0], fecha: '', usuario: '' };
   const [mf, setMf] = useState<typeof emptyMov>(emptyMov);
 
-  // Order form
   const emptyPed = { productoId: productos[0]?.id ?? 1, cantidad: 0, tipo: 'Reposición' as 'Reposición' | 'Venta', estado: 'Pendiente' as ScmPedido['estado'], proveedorId: 1, notas: '' };
   const [pedf, setPedf] = useState<typeof emptyPed>(emptyPed);
 
-  // Filters
   const [prodSearch,    setProdSearch]    = useState('');
   const [prodCat,       setProdCat]       = useState('');
   const [movTipo,       setMovTipo]       = useState('');
@@ -148,11 +133,9 @@ export default function ScmModule({ screen, setScreen }: { screen: string; setSc
   const [invSearch,     setInvSearch]     = useState('');
   const [provSearch,    setProvSearch]    = useState('');
 
-  // Logística
   const [logProdId, setLogProdId] = useState(1);
   const [logEst,    setLogEst]    = useState<'PUSH' | 'PULL'>('PUSH');
 
-  // Helpers
   const prodNombre  = (id: number) => productos.find(p => p.id === id)?.nombre ?? '-';
   const provNombre  = (id: number) => proveedores.find(p => p.id === id)?.nombre ?? '-';
 
@@ -208,7 +191,6 @@ export default function ScmModule({ screen, setScreen }: { screen: string; setSc
     setModal(null);
   }
 
-  // Madurez
   const checklist = [
     { label: 'Productos y proveedores integrados',   done: productos.length > 0 && proveedores.length > 0 },
     { label: 'Inventario funcionando',               done: movimientos.length > 0 },
@@ -239,7 +221,6 @@ export default function ScmModule({ screen, setScreen }: { screen: string; setSc
 
   return (
     <div className="flex flex-col flex-1 min-h-0">
-      {/* SCM sub-nav bar */}
       <div className="bg-emerald-950 flex items-center gap-0 px-2 shrink-0 overflow-x-auto">
         {subNav.map(t => (
           <button key={t.s} onClick={() => setScreen(t.s)}
@@ -251,7 +232,6 @@ export default function ScmModule({ screen, setScreen }: { screen: string; setSc
 
       <div className="flex-1 overflow-auto bg-slate-50">
 
-        {/* ── 1. INICIO / MENÚ SCM ─────────────────────────────────────────── */}
         {screen === 'scm-home' && (
           <div className="p-6 max-w-4xl">
             <div className="mb-6">
@@ -278,7 +258,6 @@ export default function ScmModule({ screen, setScreen }: { screen: string; setSc
           </div>
         )}
 
-        {/* ── 2. PRODUCTOS (LISTADO) ────────────────────────────────────────── */}
         {screen === 'scm-productos' && (
           <div className="p-6">
             <div className="flex items-center justify-between mb-4">
@@ -324,7 +303,6 @@ export default function ScmModule({ screen, setScreen }: { screen: string; setSc
           </div>
         )}
 
-        {/* ── 4. PROVEEDORES ────────────────────────────────────────────────── */}
         {screen === 'scm-proveedores' && (
           <div className="p-6">
             <div className="flex items-center justify-between mb-4">
@@ -359,7 +337,6 @@ export default function ScmModule({ screen, setScreen }: { screen: string; setSc
           </div>
         )}
 
-        {/* ── 6. INVENTARIO ─────────────────────────────────────────────────── */}
         {screen === 'scm-inventario' && (
           <div className="p-6">
             <h1 className="text-xl font-semibold text-slate-800 mb-4">Inventario</h1>
@@ -388,7 +365,6 @@ export default function ScmModule({ screen, setScreen }: { screen: string; setSc
           </div>
         )}
 
-        {/* ── 7. MOVIMIENTOS ────────────────────────────────────────────────── */}
         {screen === 'scm-movimientos' && (
           <div className="p-6">
             <div className="flex items-center justify-between mb-4">
@@ -435,12 +411,10 @@ export default function ScmModule({ screen, setScreen }: { screen: string; setSc
           </div>
         )}
 
-        {/* ── 9 + 10. LOGÍSTICA ─────────────────────────────────────────────── */}
         {screen === 'scm-logistica' && (
           <div className="p-6 max-w-5xl">
             <h1 className="text-xl font-semibold text-slate-800 mb-6">Logística – Estrategia de reposición</h1>
             <div className="grid grid-cols-2 gap-5 mb-6">
-              {/* Config panel */}
               <div className="bg-white rounded-xl border border-slate-100 p-5 shadow-sm">
                 <h2 className="text-sm font-semibold text-slate-700 mb-4">Configurar estrategia</h2>
                 <Field label="Producto">
@@ -474,7 +448,6 @@ export default function ScmModule({ screen, setScreen }: { screen: string; setSc
                 </button>
               </div>
 
-              {/* Comparison cards */}
               <div className="flex flex-col gap-4">
                 {(['PUSH', 'PULL'] as const).map(est => {
                   const count = productos.filter(p => p.estrategia === est).length;
@@ -493,7 +466,6 @@ export default function ScmModule({ screen, setScreen }: { screen: string; setSc
               </div>
             </div>
 
-            {/* Comparative table */}
             <div className="bg-white rounded-xl border border-slate-100 shadow-sm">
               <div className="px-5 py-3 border-b border-slate-100">
                 <h2 className="text-sm font-semibold text-slate-700">Productos por estrategia</h2>
@@ -518,7 +490,6 @@ export default function ScmModule({ screen, setScreen }: { screen: string; setSc
           </div>
         )}
 
-        {/* ── 11. PEDIDOS ───────────────────────────────────────────────────── */}
         {screen === 'scm-pedidos' && (
           <div className="p-6">
             <div className="flex items-center justify-between mb-4">
@@ -569,7 +540,6 @@ export default function ScmModule({ screen, setScreen }: { screen: string; setSc
           </div>
         )}
 
-        {/* ── 13. NIVEL DE MADUREZ ──────────────────────────────────────────── */}
         {screen === 'scm-madurez' && (
           <div className="p-6 max-w-2xl">
             <h1 className="text-xl font-semibold text-slate-800 mb-6">Nivel de madurez SCM</h1>
@@ -578,11 +548,9 @@ export default function ScmModule({ screen, setScreen }: { screen: string; setSc
                 <p className="text-xs font-medium text-slate-500">Nivel actual</p>
                 <span className="text-sm font-semibold text-emerald-700">{niveles[nivelIdx]}</span>
               </div>
-              {/* Progress bar */}
               <div className="w-full h-3 bg-slate-100 rounded-full overflow-hidden mb-5">
                 <div className="h-full bg-emerald-500 rounded-full transition-all" style={{ width: `${((nivelIdx + 1) / 3) * 100}%` }} />
               </div>
-              {/* Stage indicators */}
               <div className="grid grid-cols-3 gap-3 mb-6">
                 {niveles.map((n, i) => (
                   <div key={n} className={`p-3 rounded-lg text-center text-xs font-medium border transition-colors ${i === nivelIdx ? 'bg-emerald-600 text-white border-emerald-600' : i < nivelIdx ? 'bg-emerald-50 text-emerald-700 border-emerald-100' : 'bg-slate-50 text-slate-400 border-slate-100'}`}>
@@ -612,14 +580,12 @@ export default function ScmModule({ screen, setScreen }: { screen: string; setSc
           </div>
         )}
 
-        {/* ── 14. REPORTES SCM (Dashboard) ─────────────────────────────────── */}
         {screen === 'scm-reportes' && (() => {
           const enProceso   = pedidos.filter(p => p.estado === 'En proceso').length;
           const stockBajos  = productos.filter(p => p.stock < p.stockMin);
           const pushCount   = productos.filter(p => p.estrategia === 'PUSH').length;
           const pullCount   = productos.filter(p => p.estrategia === 'PULL').length;
 
-          // Sales by product (from Salida movements)
           const ventasProd: Record<number, number> = {};
           movimientos.filter(m => m.tipo === 'Salida').forEach(m => {
             ventasProd[m.productoId] = (ventasProd[m.productoId] ?? 0) + m.cantidad;
@@ -628,12 +594,10 @@ export default function ScmModule({ screen, setScreen }: { screen: string; setSc
             .sort((a, b) => b.ventas - a.ventas).slice(0, 4);
           const maxVentas = Math.max(...topVentas.map(p => p.ventas), 1);
 
-          // Rotation ratio (simple: ventas / stock)
           const totalVentas = Object.values(ventasProd).reduce((s, v) => s + v, 0);
           const totalStock  = productos.reduce((s, p) => s + p.stock, 0);
           const rotPct      = totalStock > 0 ? Math.round((totalVentas / totalStock) * 100) : 0;
 
-          // Monthly PUSH vs PULL (static visual data)
           const meses   = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun'];
           const pushBar = [20, 30, 25, 40, 35, pushCount * 10];
           const pullBar = [15, 20, 30, 25, 40, pullCount * 10];
@@ -643,7 +607,6 @@ export default function ScmModule({ screen, setScreen }: { screen: string; setSc
             <div className="p-6 max-w-5xl">
               <h1 className="text-xl font-semibold text-slate-800 mb-5">Reportes y métricas SCM</h1>
 
-              {/* KPIs */}
               <div className="grid grid-cols-4 gap-4 mb-5">
                 {[
                   { label: 'Productos',         value: productos.length,   emoji: '📦', color: 'text-emerald-600' },
@@ -662,7 +625,6 @@ export default function ScmModule({ screen, setScreen }: { screen: string; setSc
               </div>
 
               <div className="grid grid-cols-2 gap-4 mb-4">
-                {/* Productos más vendidos */}
                 <div className="bg-white rounded-xl border border-slate-100 p-5 shadow-sm">
                   <h2 className="text-sm font-semibold text-slate-700 mb-4">Productos más vendidos</h2>
                   {topVentas.length === 0
@@ -683,7 +645,6 @@ export default function ScmModule({ screen, setScreen }: { screen: string; setSc
                   }
                 </div>
 
-                {/* Rotación de inventario */}
                 <div className="bg-white rounded-xl border border-slate-100 p-5 shadow-sm">
                   <h2 className="text-sm font-semibold text-slate-700 mb-4">Rotación de inventario</h2>
                   <div className="flex items-center gap-5">
@@ -709,7 +670,6 @@ export default function ScmModule({ screen, setScreen }: { screen: string; setSc
               </div>
 
               <div className="grid grid-cols-2 gap-4">
-                {/* Inventario crítico */}
                 <div className="bg-white rounded-xl border border-slate-100 p-5 shadow-sm">
                   <h2 className="text-sm font-semibold text-slate-700 mb-3">Inventario crítico</h2>
                   {stockBajos.length === 0
@@ -733,7 +693,6 @@ export default function ScmModule({ screen, setScreen }: { screen: string; setSc
                   }
                 </div>
 
-                {/* Comparativa PUSH vs PULL mensual */}
                 <div className="bg-white rounded-xl border border-slate-100 p-5 shadow-sm">
                   <h2 className="text-sm font-semibold text-slate-700 mb-3">Comparativa PUSH vs PULL</h2>
                   <svg width="100%" viewBox="0 0 260 110" preserveAspectRatio="xMidYMid meet">
@@ -762,9 +721,7 @@ export default function ScmModule({ screen, setScreen }: { screen: string; setSc
 
       </div>
 
-      {/* ── MODALS ──────────────────────────────────────────────────────────── */}
 
-      {/* Product modal */}
       {modal === 'prod' && (
         <Modal title={editId ? 'Editar producto' : 'Nuevo producto'} onClose={() => setModal(null)}>
           <div className="p-5 space-y-3">
@@ -808,7 +765,6 @@ export default function ScmModule({ screen, setScreen }: { screen: string; setSc
         </Modal>
       )}
 
-      {/* Provider modal */}
       {modal === 'prov' && (
         <Modal title={editId ? 'Editar proveedor' : 'Nuevo proveedor'} onClose={() => setModal(null)}>
           <div className="p-5 space-y-3">
@@ -826,7 +782,6 @@ export default function ScmModule({ screen, setScreen }: { screen: string; setSc
         </Modal>
       )}
 
-      {/* Movement modal */}
       {modal === 'mov' && (
         <Modal title="Nuevo movimiento" onClose={() => setModal(null)}>
           <div className="p-5 space-y-3">
@@ -872,7 +827,6 @@ export default function ScmModule({ screen, setScreen }: { screen: string; setSc
         </Modal>
       )}
 
-      {/* Order modal */}
       {modal === 'ped' && (
         <Modal title="Nuevo pedido" onClose={() => setModal(null)}>
           <div className="p-5 space-y-3">

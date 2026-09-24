@@ -1,7 +1,6 @@
 const { Op } = require('sequelize');
 const { Proveedor } = require('../models');
 
-// POST /proveedores
 async function crearProveedor(req, res) {
   try {
     const { nombre, contacto, correo, telefono, direccion } = req.body;
@@ -15,7 +14,6 @@ async function crearProveedor(req, res) {
   }
 }
 
-// GET /proveedores?busqueda=texto
 async function listarProveedores(req, res) {
   try {
     const { busqueda } = req.query;
@@ -34,7 +32,6 @@ async function listarProveedores(req, res) {
   }
 }
 
-// GET /proveedores/:id
 async function obtenerProveedor(req, res) {
   try {
     const proveedor = await Proveedor.findByPk(req.params.id);
@@ -45,7 +42,6 @@ async function obtenerProveedor(req, res) {
   }
 }
 
-// PUT /proveedores/:id
 async function actualizarProveedor(req, res) {
   try {
     const proveedor = await Proveedor.findByPk(req.params.id);
@@ -65,7 +61,6 @@ async function actualizarProveedor(req, res) {
   }
 }
 
-// DELETE /proveedores/:id
 async function eliminarProveedor(req, res) {
   try {
     const proveedor = await Proveedor.findByPk(req.params.id);

@@ -14,7 +14,6 @@ import {
   type MadurezScm,
 } from './api';
 
-// ─── Types ────────────────────────────────────────────────────────────────────
 type Screen =
   | 'login' | 'register'
   | 'dashboard' | 'clients' | 'client-detail'
@@ -27,11 +26,6 @@ type Screen =
 
 type Role = 'admin' | 'usuario';
 
-// ── Traducción de mayúsculas/minúsculas entre el diseño y el backend ────────
-// El diseño original (con datos de ejemplo) usa 'Activo'/'Inactivo',
-// 'Llamada'/'Correo'/'Reunión', etc. El backend guarda esos mismos valores
-// en minúsculas / sin acentos. Estos mapas traducen entre ambos mundos sin
-// tocar el resto de la UI.
 const ESTADO_LABEL: Record<string, 'Activo' | 'Inactivo'> = { activo: 'Activo', inactivo: 'Inactivo' };
 const ESTADO_VALUE: Record<string, 'activo' | 'inactivo'> = { Activo: 'activo', Inactivo: 'inactivo' };
 const TIPO_LABEL: Record<string, string> = { llamada: 'Llamada', correo: 'Correo', reunion: 'Reunión' };
@@ -113,11 +107,7 @@ const PRODUCTOS = [
     color: 'violet',
   },
 ];
-// Nota: este catálogo de "tienda en línea" (con carrito) no forma parte del
-// temario del CRM/SCM que construimos — lo dejamos con datos locales tal
-// cual venía del diseño, sin conectar a la base de datos.
 
-// ─── SCM Types ────────────────────────────────────────────────────────────────
 interface ScmProducto {
   id: number; nombre: string; categoria: string; proveedor: string; proveedorId: number | null;
   stock: number; stockMin: number; estrategia: 'PUSH' | 'PULL'; costo: number; descripcion: string;
@@ -154,7 +144,6 @@ const mapScmPedido = (p: ApiPedido): ScmPedido => ({
 const SCM_CATEGORIAS = ['Cerámica', 'Textil', 'Decoración', 'Joyería'];
 const SCM_MOTIVOS    = ['Compra', 'Venta', 'Ajuste', 'Pedido', 'Devolución'];
 
-// ─── Validation ───────────────────────────────────────────────────────────────
 const nameOk  = (n: string) => n.trim().length >= 3 && !/\d/.test(n);
 const emailOk = (e: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e);
 const passReqs = (p: string) => ({
@@ -165,7 +154,6 @@ const passReqs = (p: string) => ({
 });
 const passOk = (p: string) => Object.values(passReqs(p)).every(Boolean);
 
-// ─── Logo ─────────────────────────────────────────────────────────────────────
 function BrilloLogo({ size = 28 }: { size?: number }) {
   return (
     <svg width={size} height={size} viewBox="0 0 32 32" fill="none">
@@ -178,7 +166,6 @@ function BrilloLogo({ size = 28 }: { size?: number }) {
   );
 }
 
-// ─── Icons ────────────────────────────────────────────────────────────────────
 const IcoGrid     = () => <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}><rect x={3} y={3} width={7} height={7} rx={1}/><rect x={14} y={3} width={7} height={7} rx={1}/><rect x={3} y={14} width={7} height={7} rx={1}/><rect x={14} y={14} width={7} height={7} rx={1}/></svg>;
 const IcoBriefcase= () => <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}><path strokeLinecap="round" strokeLinejoin="round" d="M20 7H4a2 2 0 00-2 2v10a2 2 0 002 2h16a2 2 0 002-2V9a2 2 0 00-2-2z"/><path strokeLinecap="round" strokeLinejoin="round" d="M16 7V5a2 2 0 00-2-2h-4a2 2 0 00-2 2v2"/></svg>;
 const IcoChat     = () => <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}><path strokeLinecap="round" strokeLinejoin="round" d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z"/></svg>;
@@ -204,7 +191,6 @@ const IcoPencil   = () => <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 
 const IcoTrash    = () => <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>;
 const IcoSpray    = () => <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}><path strokeLinecap="round" strokeLinejoin="round" d="M9.75 3.75H15a.75.75 0 01.75.75v1.5A.75.75 0 0115 6.75H9.75A.75.75 0 019 6V4.5a.75.75 0 01.75-.75z"/><path strokeLinecap="round" strokeLinejoin="round" d="M6.75 6.75h10.5a.75.75 0 01.75.75v12a.75.75 0 01-.75.75H6.75A.75.75 0 016 19.5v-12a.75.75 0 01.75-.75z"/><path strokeLinecap="round" strokeLinejoin="round" d="M9 11.25h6M9 14.25h6M9 17.25h3"/></svg>;
 
-// ─── UI Micro Components ──────────────────────────────────────────────────────
 function Initials({ name, size = 'md' }: { name: string; size?: 'sm' | 'md' | 'lg' }) {
   const letters = name.split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase();
   const sz = { sm: 'w-8 h-8 text-xs', md: 'w-10 h-10 text-sm', lg: 'w-12 h-12 text-base' }[size];
@@ -258,7 +244,6 @@ function InteractionRow({ tipo, descripcion, fecha, usuario }: { tipo: string; d
   );
 }
 
-// ─── Password Requirement Row ─────────────────────────────────────────────────
 function PassReq({ ok, label }: { ok: boolean; label: string }) {
   return (
     <div className={`flex items-center gap-1.5 text-xs ${ok ? 'text-sky-600' : 'text-slate-400'}`}>
@@ -270,7 +255,6 @@ function PassReq({ ok, label }: { ok: boolean; label: string }) {
   );
 }
 
-// ─── Charts ───────────────────────────────────────────────────────────────────
 function DonutChart({ pct = 75 }: { pct?: number }) {
   const r = 50, cx = 62, cy = 62, circ = 2 * Math.PI * r;
   const active = (pct / 100) * circ;
@@ -337,13 +321,11 @@ function PieChart() {
   );
 }
 
-// ─── Sidebar ──────────────────────────────────────────────────────────────────
 const IcoShop = () => <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}><path strokeLinecap="round" strokeLinejoin="round" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z"/></svg>;
 const IcoBox  = () => <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}><path strokeLinecap="round" strokeLinejoin="round" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 10V11"/></svg>;
 const IcoTruck = () => <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}><path strokeLinecap="round" strokeLinejoin="round" d="M9 17a2 2 0 11-4 0 2 2 0 014 0zM19 17a2 2 0 11-4 0 2 2 0 014 0z"/><path strokeLinecap="round" strokeLinejoin="round" d="M13 16V6a1 1 0 00-1-1H4a1 1 0 00-1 1v10a1 1 0 001 1h1m8-1a1 1 0 01-1 1H9m4-1V8a1 1 0 011-1h2.586a1 1 0 01.707.293l3.414 3.414a1 1 0 01.293.707V16a1 1 0 01-1 1h-1"/></svg>;
 const IcoChart = () => <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}><path strokeLinecap="round" strokeLinejoin="round" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg>;
 
-// adminOnly: solo visible para admin. Si es false, visible para todos.
 const NAV = [
   { label: 'Dashboard',     s: 'dashboard'           as Screen, Icon: IcoGrid,      adminOnly: true  },
   { label: 'Clientes',      s: 'clients'             as Screen, Icon: IcoBriefcase, adminOnly: true  },
@@ -396,7 +378,6 @@ function Sidebar({ screen, setScreen, role }: { screen: Screen; setScreen: (s: S
   );
 }
 
-// ─── Top Nav ──────────────────────────────────────────────────────────────────
 function TopNav({ screen, setScreen, role, currentUser, onLogout }: {
   screen: Screen; setScreen: (s: Screen) => void;
   role: Role; currentUser: UsuarioSesion | null; onLogout: () => void;
@@ -441,21 +422,17 @@ function TopNav({ screen, setScreen, role, currentUser, onLogout }: {
   );
 }
 
-// ─── App ──────────────────────────────────────────────────────────────────────
 export default function App() {
-  // Auth state
   const [screen, setScreen]       = useState<Screen>(getToken() ? 'dashboard' : 'login');
   const [currentUser, setCurrentUser] = useState<UsuarioSesion | null>(getStoredUsuario());
   const role: Role                = currentUser?.rol ?? 'usuario';
 
-  // Login form
   const [loginEmail, setLoginEmail]   = useState('');
   const [loginPass,  setLoginPass]    = useState('');
   const [loginErr,   setLoginErr]     = useState('');
   const [showLoginP, setShowLoginP]   = useState(false);
   const [loginLoading, setLoginLoading] = useState(false);
 
-  // Register form
   const [regNombre,   setRegNombre]   = useState('');
   const [regPaterno,  setRegPaterno]  = useState('');
   const [regMaterno,  setRegMaterno]  = useState('');
@@ -469,7 +446,6 @@ export default function App() {
 
   const EMPTY_CLIENT: Client = { id: 0, nombre: '', empresa: '', correo: '', telefono: '', etapaCRM: 'Prospecto', estado: 'Activo', fechaRegistro: '' };
 
-  // Clientes
   const [clients, setClients]           = useState<Client[]>([]);
   const [clientsLoading, setClientsLoading] = useState(false);
   const [search, setSearch]             = useState('');
@@ -481,8 +457,6 @@ export default function App() {
   const [carrito, setCarrito]           = useState<Record<number, number>>({});
   const [carritoOpen, setCarritoOpen]   = useState(false);
 
-  // Modal de alta / edición de cliente (no existía en el diseño; se agrega
-  // porque el botón "+ Nuevo cliente" y "Editar"/"Eliminar" no tenían acción)
   const [showClientModal, setShowClientModal] = useState(false);
   const [editingClient, setEditingClient]     = useState<Client | null>(null);
   const [clientForm, setClientForm]           = useState({ nombre: '', correo: '', telefono: '', empresa: '', estado: 'Activo' as 'Activo' | 'Inactivo' });
@@ -493,7 +467,6 @@ export default function App() {
   const totalCarrito = Object.values(carrito).reduce((s, q) => s + q, 0);
   const totalPrecio  = Object.entries(carrito).reduce((s, [id, q]) => s + (PRODUCTOS.find(p => p.id === Number(id))?.precio ?? 0) * q, 0);
 
-  // Interacciones: historial del cliente abierto, listado global (admin) / mío (usuario), y mi actividad
   const [clientInteractions, setClientInteractions] = useState<Interaction[]>([]);
   const [clientIntLoading, setClientIntLoading]     = useState(false);
   const [myInteractions, setMyInteractions]         = useState<Interaction[]>([]);
@@ -501,15 +474,12 @@ export default function App() {
   const [myActivities, setMyActivities]             = useState<Interaction[]>([]);
   const [myActLoading, setMyActLoading]             = useState(false);
 
-  // Métricas del dashboard/reportes CRM
   const [metricas, setMetricas]           = useState<Metricas | null>(null);
   const [metricasLoading, setMetricasLoading] = useState(false);
 
-  // Usuarios (pantalla admin)
   const [users, setUsers]           = useState<AppUser[]>([]);
   const [usersLoading, setUsersLoading] = useState(false);
 
-  // ── SCM State ───────────────────────────────────────────────────────────────
   const [scmProductos,   setScmProductos]   = useState<ScmProducto[]>([]);
   const [scmProveedores, setScmProveedores] = useState<ScmProveedor[]>([]);
   const [scmMovimientos, setScmMovimientos] = useState<ScmMovimiento[]>([]);
@@ -518,29 +488,22 @@ export default function App() {
   const [scmMadurez,     setScmMadurez]     = useState<MadurezScm | null>(null);
   const [scmLoading,     setScmLoading]     = useState(false);
 
-  // SCM search / filter
   const [scmSearch,      setScmSearch]      = useState('');
   const [scmTipoMov,     setScmTipoMov]     = useState('Todos');
   const [scmProdMov,     setScmProdMov]     = useState('Todos');
   const [scmEstPed,      setScmEstPed]      = useState('Todos');
   const [scmTipoPed,     setScmTipoPed]     = useState('Todos');
 
-  // SCM modals
   const [scmModal, setScmModal] = useState<'producto'|'proveedor'|'movimiento'|'pedido'|null>(null);
   const [editingScmProducto, setEditingScmProducto]   = useState<ScmProducto | null>(null);
   const [editingScmProveedor, setEditingScmProveedor] = useState<ScmProveedor | null>(null);
   const [editingScmPedido, setEditingScmPedido]       = useState<ScmPedido | null>(null);
   const [scmFormError, setScmFormError] = useState('');
 
-  // SCM producto form
   const [scmPF, setScmPF] = useState({ nombre:'', categoria:'Cerámica', proveedor:'', stock:0, stockMin:0, estrategia:'PUSH' as 'PUSH'|'PULL', costo:0, descripcion:'' });
-  // SCM proveedor form
   const [scmPrF, setScmPrF] = useState({ nombre:'', contacto:'', correo:'', telefono:'', direccion:'' });
-  // SCM movimiento form
   const [scmMF, setScmMF] = useState({ producto:'', tipo:'Entrada' as 'Entrada'|'Salida', cantidad:0, motivo:'Compra', fecha:'', usuario:'' });
-  // SCM pedido form
   const [scmOF, setScmOF] = useState({ producto:'', cantidad:0, tipo:'Reposición' as 'Reposición'|'Venta', proveedor:'', fecha:'', notas:'' });
-  // Logística
   const [logProd, setLogProd] = useState('');
   const [logEst,  setLogEst]  = useState<'PUSH'|'PULL'>('PUSH');
   const [logTab,  setLogTab]  = useState<'PUSH'|'PULL'>('PUSH');
@@ -549,7 +512,6 @@ export default function App() {
   const [newStage, setNewStage]         = useState('Prospecto');
   const [stageFilter, setStageFilter]   = useState('Todas');
 
-  // Configuración form
   const [cfgCurrent, setCfgCurrent]   = useState('');
   const [cfgNew,     setCfgNew]       = useState('');
   const [cfgConfirm, setCfgConfirm]   = useState('');
@@ -615,7 +577,6 @@ export default function App() {
     }
   }
 
-  // ── Data loaders ─────────────────────────────────────────────────────────
   async function reloadClientes() {
     setClientsLoading(true); setGlobalError('');
     try {
@@ -702,7 +663,6 @@ export default function App() {
     finally { setScmLoading(false); }
   }
 
-  // ── Efectos: disparan la carga según la pantalla activa ─────────────────
   useEffect(() => { if (screen === 'clients') reloadClientes(); }, [screen, search, filterEstado]);
   useEffect(() => { if ((screen === 'client-detail' || screen === 'interaction-history') && selectedClient) reloadClientInteractions(selectedClient.id); }, [screen, selectedClient]);
   useEffect(() => { if (screen === 'global-interactions') reloadGlobalInteractions(); }, [screen]);
@@ -724,7 +684,6 @@ export default function App() {
     }
   }, [screen, scmProductos]);
 
-  // ── LOGIN ───────────────────────────────────────────────────────────────────
   const handleLogin = async () => {
     setLoginErr('');
     if (!loginEmail.includes('@')) { setLoginErr('El correo debe incluir @'); return; }
@@ -857,7 +816,6 @@ export default function App() {
     </div>
   );
 
-  // ── REGISTER ────────────────────────────────────────────────────────────────
   const onlyLetters = (v: string) => !/\d/.test(v);
   const handleRegister = async () => {
     const errs: Record<string, string> = {};
@@ -926,7 +884,6 @@ export default function App() {
           </div>
         ) : (
           <div className="space-y-3">
-            {/* Nombre */}
             <div>
               <label className="block text-xs font-medium text-slate-700 mb-1">Nombre(s)</label>
               <input type="text" value={regNombre}
@@ -936,7 +893,6 @@ export default function App() {
               {regErrors.nombre && <p className="text-xs text-red-500 mt-0.5">{regErrors.nombre}</p>}
             </div>
 
-            {/* Apellidos en grid */}
             <div className="grid grid-cols-2 gap-3">
               <div>
                 <label className="block text-xs font-medium text-slate-700 mb-1">Apellido paterno</label>
@@ -956,7 +912,6 @@ export default function App() {
               </div>
             </div>
 
-            {/* Teléfono */}
             <div>
               <label className="block text-xs font-medium text-slate-700 mb-1">Número de teléfono</label>
               <input
@@ -977,7 +932,6 @@ export default function App() {
               </div>
             </div>
 
-            {/* Correo */}
             <div>
               <label className="block text-xs font-medium text-slate-700 mb-1">Correo electrónico</label>
               <input type="email" value={regCorreo}
@@ -987,7 +941,6 @@ export default function App() {
               {regErrors.correo && <p className="text-xs text-red-500 mt-0.5">{regErrors.correo}</p>}
             </div>
 
-            {/* Contraseña */}
             <div>
               <label className="block text-xs font-medium text-slate-700 mb-1">Contraseña</label>
               <div className="relative">
@@ -1030,13 +983,8 @@ export default function App() {
     </div>
   );
 
-  // ── Shared data filters ─────────────────────────────────────────────────────
-  // Los clientes ya llegan filtrados desde el backend (búsqueda/estado se
-  // mandan como parámetros de la petición); se conserva el nombre para no
-  // tocar el resto del JSX que ya lo usa.
   const filteredClients = clients;
 
-  // ── SHELL ───────────────────────────────────────────────────────────────────
   return (
     <div className="flex h-screen bg-sky-50 overflow-hidden">
       <Sidebar screen={screen} setScreen={setScreen} role={role} />
@@ -1044,7 +992,6 @@ export default function App() {
         <TopNav screen={screen} setScreen={setScreen} role={role} currentUser={currentUser} onLogout={logout} />
         <main className="flex-1 overflow-auto">
 
-          {/* ── DASHBOARD ─────────────────────────────────────────────────── */}
           {screen === 'dashboard' && (
             <div className="p-6 max-w-5xl">
               <h1 className="text-xl font-semibold text-sky-900 mb-0.5">Resumen CRM</h1>
@@ -1098,7 +1045,6 @@ export default function App() {
             </div>
           )}
 
-          {/* ── CLIENTES ──────────────────────────────────────────────────── */}
           {screen === 'clients' && (
             <div className="p-6">
               <div className="flex items-center justify-between mb-5">
@@ -1160,7 +1106,6 @@ export default function App() {
             </div>
           )}
 
-          {/* ── CLIENT DETAIL ─────────────────────────────────────────────── */}
           {screen === 'client-detail' && (
             <div className="p-6">
               <button onClick={() => setScreen('clients')} className="flex items-center gap-1.5 text-sm text-sky-500 hover:text-sky-800 mb-4 transition-colors">
@@ -1227,7 +1172,6 @@ export default function App() {
             </div>
           )}
 
-          {/* ── INTERACTION HISTORY (client-specific) ─────────────────────── */}
           {screen === 'interaction-history' && (
             <div className="p-6">
               <button onClick={() => setScreen('client-detail')} className="flex items-center gap-1.5 text-sm text-sky-500 hover:text-sky-800 mb-4 transition-colors"><IcoBack /> Volver a cliente</button>
@@ -1250,7 +1194,6 @@ export default function App() {
             </div>
           )}
 
-          {/* ── GLOBAL INTERACTIONS ───────────────────────────────────────── */}
           {screen === 'global-interactions' && (
             <div className="p-6">
               <div className="flex items-center justify-between mb-5">
@@ -1275,7 +1218,6 @@ export default function App() {
             </div>
           )}
 
-          {/* ── CRM STAGE ─────────────────────────────────────────────────── */}
           {screen === 'crm-stage' && (
             <div className="p-6">
               <div className="grid grid-cols-2 gap-4 max-w-2xl">
@@ -1308,7 +1250,6 @@ export default function App() {
             </div>
           )}
 
-          {/* ── MY ACTIVITY ───────────────────────────────────────────────── */}
           {screen === 'my-activity' && (
             <div className="p-6">
               <div className="flex items-center justify-between mb-5">
@@ -1350,7 +1291,6 @@ export default function App() {
             </div>
           )}
 
-          {/* ── REPORTS ───────────────────────────────────────────────────── */}
           {screen === 'reports' && metricas && (() => {
             const totalClientes  = metricas.total_clientes;
             const activosCount   = metricas.clientes_activos;
@@ -1449,11 +1389,8 @@ export default function App() {
             );
           })()}
 
-          {/* ── EVALUACIONES ──────────────────────────────────────────────── */}
-          {/* ── CATÁLOGO DE PRODUCTOS ─────────────────────────────────────── */}
           {screen === 'catalogo' && (
             <div className="p-6 max-w-5xl">
-              {/* Header */}
               <div className="flex items-center justify-between mb-6">
                 <div>
                   <h1 className="text-xl font-semibold text-sky-900">Catálogo de Productos</h1>
@@ -1480,22 +1417,18 @@ export default function App() {
                   const accentBorder: Record<string, string> = { sky: 'border-sky-100', emerald: 'border-emerald-100', violet: 'border-violet-100' };
                   return (
                     <div key={p.id} className={`bg-white rounded-2xl border ${accentBorder[p.color]} shadow-sm overflow-hidden flex flex-col`}>
-                      {/* Imagen / ícono */}
                       <div className={`${accentBg[p.color]} flex items-center justify-center h-36 text-6xl`}>
                         {p.emoji}
                       </div>
-                      {/* Contenido */}
                       <div className="p-4 flex-1 flex flex-col">
                         <h2 className="text-sm font-semibold text-sky-900 leading-snug mb-1">{p.nombre}</h2>
                         <p className={`text-xs font-medium ${accentText[p.color]} mb-2`}>{p.unidad}</p>
                         <p className="text-xs text-slate-500 leading-relaxed mb-3 flex-1">{p.descripcion}</p>
-                        {/* Tags */}
                         <div className="flex flex-wrap gap-1 mb-4">
                           {p.tags.map(t => (
                             <span key={t} className={`text-[10px] px-2 py-0.5 rounded-full ${accentBg[p.color]} ${accentText[p.color]} font-medium`}>{t}</span>
                           ))}
                         </div>
-                        {/* Precio y acción */}
                         <div className="flex items-center justify-between mt-auto">
                           <div>
                             <p className="text-lg font-bold text-sky-900">${p.precio.toFixed(2)}</p>
@@ -1522,7 +1455,6 @@ export default function App() {
                 })}
               </div>
 
-              {/* Panel carrito desplegable */}
               {carritoOpen && (
                 <div className="mt-6 bg-white rounded-2xl border border-sky-100 shadow-sm p-5">
                   <h2 className="text-base font-semibold text-sky-900 mb-4">Resumen del carrito</h2>
@@ -1580,7 +1512,6 @@ export default function App() {
             </div>
           )}
 
-          {/* ── USUARIOS (admin only) ─────────────────────────────────────── */}
           {screen === 'usuarios' && (
             <div className="p-6">
               <div className="flex items-center justify-between mb-5">
@@ -1637,7 +1568,6 @@ export default function App() {
             </div>
           )}
 
-          {/* ── CONFIGURACIÓN ─────────────────────────────────────────────── */}
           {screen === 'configuracion' && (
             <div className="p-6 max-w-xl">
               <h1 className="text-xl font-semibold text-sky-900 mb-1">Configuración</h1>
@@ -1720,11 +1650,7 @@ export default function App() {
             </div>
           )}
 
-          {/* ══════════════════════════════════════════════════════════════
-              SCM SCREENS
-          ══════════════════════════════════════════════════════════════ */}
 
-          {/* ── SCM HOME ──────────────────────────────────────────────────── */}
           {screen === 'scm-home' && (
             <div className="p-6 max-w-4xl">
               <h1 className="text-xl font-semibold text-sky-900 mb-0.5">SCM</h1>
@@ -1749,7 +1675,6 @@ export default function App() {
             </div>
           )}
 
-          {/* ── SCM PRODUCTOS ─────────────────────────────────────────────── */}
           {screen === 'scm-productos' && (
             <div className="p-6">
               <div className="flex items-center gap-3 mb-1">
@@ -1803,7 +1728,6 @@ export default function App() {
             </div>
           )}
 
-          {/* ── SCM PROVEEDORES ───────────────────────────────────────────── */}
           {screen === 'scm-proveedores' && (
             <div className="p-6">
               <div className="flex items-center gap-3 mb-1">
@@ -1853,7 +1777,6 @@ export default function App() {
             </div>
           )}
 
-          {/* ── SCM INVENTARIO ────────────────────────────────────────────── */}
           {screen === 'scm-inventario' && (
             <div className="p-6">
               <div className="flex items-center gap-3 mb-1">
@@ -1901,7 +1824,6 @@ export default function App() {
             </div>
           )}
 
-          {/* ── SCM MOVIMIENTOS ───────────────────────────────────────────── */}
           {screen === 'scm-movimientos' && (
             <div className="p-6">
               <div className="flex items-center gap-3 mb-1">
@@ -1952,7 +1874,6 @@ export default function App() {
             </div>
           )}
 
-          {/* ── SCM LOGÍSTICA ─────────────────────────────────────────────── */}
           {screen === 'scm-logistica' && (
             <div className="p-6 max-w-5xl">
               <div className="flex items-center gap-3 mb-1">
@@ -1961,7 +1882,6 @@ export default function App() {
               </div>
               <h1 className="text-xl font-semibold text-sky-900 mb-5">Logística – Estrategia de reposición</h1>
               <div className="grid grid-cols-2 gap-5 mb-5">
-                {/* Configurar estrategia */}
                 <div className="bg-white rounded-xl border border-sky-100 p-5 shadow-sm">
                   <h2 className="text-sm font-semibold text-sky-900 mb-4">Configurar estrategia</h2>
                   <label className="block text-xs font-medium text-slate-700 mb-1">Producto</label>
@@ -1987,7 +1907,6 @@ export default function App() {
                     className="w-full bg-sky-600 text-white text-sm py-2 rounded-lg hover:bg-sky-700 transition-colors">Guardar</button>
                 </div>
               </div>
-              {/* Comparativa por estrategia */}
               <div className="bg-white rounded-xl border border-sky-100 p-5 shadow-sm">
                 <h2 className="text-sm font-semibold text-sky-900 mb-3">Productos por estrategia</h2>
                 <div className="flex gap-2 mb-4">
@@ -2022,7 +1941,6 @@ export default function App() {
             </div>
           )}
 
-          {/* ── SCM PEDIDOS ───────────────────────────────────────────────── */}
           {screen === 'scm-pedidos' && (
             <div className="p-6">
               <div className="flex items-center gap-3 mb-1">
@@ -2095,7 +2013,6 @@ export default function App() {
             </div>
           )}
 
-          {/* ── SCM MADUREZ ───────────────────────────────────────────────── */}
           {screen === 'scm-madurez' && (() => {
             const CHECKLIST: Array<{ key: keyof Omit<MadurezScm, 'nivel'>; label: string }> = [
               { key: 'productos_proveedores_integrados', label: 'Productos y proveedores integrados' },
@@ -2175,7 +2092,6 @@ export default function App() {
             );
           })()}
 
-          {/* ── SCM REPORTES ──────────────────────────────────────────────── */}
           {screen === 'scm-reportes' && (
             <div className="p-6 max-w-5xl">
               <div className="flex items-center gap-3 mb-1">
@@ -2265,7 +2181,6 @@ export default function App() {
         </main>
       </div>
 
-      {/* ── CLIENT MODAL (alta / edición) ───────────────────────────────────── */}
       {showClientModal && (
         <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50" onClick={e => { if (e.target === e.currentTarget) setShowClientModal(false); }}>
           <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md mx-4 border border-sky-100">
@@ -2305,7 +2220,6 @@ export default function App() {
         </div>
       )}
 
-      {/* ── INTERACTION MODAL ─────────────────────────────────────────────────── */}
       {showModal && (
         <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50" onClick={e => { if (e.target === e.currentTarget) setShowModal(false); }}>
           <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md mx-4 border border-sky-100">
@@ -2346,12 +2260,10 @@ export default function App() {
         </div>
       )}
 
-      {/* ── SCM MODALS ────────────────────────────────────────────────────────── */}
       {scmModal && (
         <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50" onClick={e => { if (e.target === e.currentTarget) setScmModal(null); }}>
           <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md mx-4 border border-sky-100">
 
-            {/* PRODUCTO */}
             {scmModal === 'producto' && (
               <>
                 <div className="flex items-center justify-between px-5 py-4 border-b border-sky-100">
@@ -2405,7 +2317,6 @@ export default function App() {
               </>
             )}
 
-            {/* PROVEEDOR */}
             {scmModal === 'proveedor' && (
               <>
                 <div className="flex items-center justify-between px-5 py-4 border-b border-sky-100">
@@ -2427,7 +2338,6 @@ export default function App() {
               </>
             )}
 
-            {/* MOVIMIENTO */}
             {scmModal === 'movimiento' && (
               <>
                 <div className="flex items-center justify-between px-5 py-4 border-b border-sky-100">
@@ -2473,7 +2383,6 @@ export default function App() {
               </>
             )}
 
-            {/* PEDIDO */}
             {scmModal === 'pedido' && (
               <>
                 <div className="flex items-center justify-between px-5 py-4 border-b border-sky-100">

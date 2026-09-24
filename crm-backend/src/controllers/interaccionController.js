@@ -43,7 +43,6 @@ async function listarMiActividad(req, res) {
   }
 }
 
-// GET /interacciones — todas las interacciones del sistema (solo admin)
 async function listarTodas(req, res) {
   try {
     const interacciones = await Interaccion.findAll({

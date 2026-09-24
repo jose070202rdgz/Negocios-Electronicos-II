@@ -21,13 +21,11 @@ app.get('/', (req, res) => {
   res.json({ mensaje: 'API del CRM + SCM funcionando correctamente' });
 });
 
-// Rutas CRM
 app.use('/auth', authRoutes);
 app.use('/clientes', clienteRoutes);
 app.use('/interacciones', interaccionRoutes);
 app.use('/metricas', metricaRoutes);
 
-// Rutas SCM
 app.use('/proveedores', proveedorRoutes);
 app.use('/productos', productoRoutes);
 app.use('/movimientos', movimientoRoutes);

@@ -1,6 +1,3 @@
-// Capa de acceso a la API (CRM + SCM). Centraliza fetch, el header
-// Authorization y el manejo de errores para que los componentes de la UI
-// no tengan que repetir esta lógica.
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:4000';
 const TOKEN_KEY = 'crm_token';
@@ -22,7 +19,6 @@ export function getStoredUsuario(): UsuarioSesion | null {
   return raw ? JSON.parse(raw) : null;
 }
 
-// ── Tipos ──────────────────────────────────────────────────────────────────
 export interface UsuarioSesion {
   id: number;
   nombre: string;
@@ -67,7 +63,6 @@ export interface Metricas {
   clientes_sin_interaccion_reciente: Array<{ id: number; nombre: string; empresa: string | null; etapa_crm: string }>;
 }
 
-// ── Tipos SCM ────────────────────────────────────────────────────────────
 export interface Proveedor {
   id: number;
   nombre: string;
@@ -151,7 +146,7 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
 
   if (!res.ok) {
     let mensaje = `Error ${res.status}`;
-    try { const data = await res.json(); mensaje = data.error || mensaje; } catch { /* cuerpo no era JSON */ }
+    try { const data = await res.json(); mensaje = data.error || mensaje; } catch { }
     throw new ApiError(mensaje);
   }
   if (res.status === 204) return null as T;
@@ -159,7 +154,6 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
 }
 
 export const api = {
-  // Auth
   login: (correo: string, password: string) =>
     request<{ token: string; usuario: UsuarioSesion }>('/auth/login', { method: 'POST', body: JSON.stringify({ correo, password }) }),
   register: (payload: { nombre: string; correo: string; password: string; rol?: string }) =>
@@ -171,7 +165,6 @@ export const api = {
   actualizarEstadoUsuario: (id: number, estado: 'activo' | 'inactivo') =>
     request<Usuario>(`/auth/usuarios/${id}/estado`, { method: 'PUT', body: JSON.stringify({ estado }) }),
 
-  // Clientes
   getClientes: (params: { busqueda?: string; estado?: string; etapa_crm?: string } = {}) => {
     const query = new URLSearchParams(Object.entries(params).filter(([, v]) => v) as [string, string][]).toString();
     return request<{ total: number; clientes: Cliente[] }>(`/clientes${query ? `?${query}` : ''}`);
@@ -182,23 +175,19 @@ export const api = {
   eliminarCliente: (id: number) => request<null>(`/clientes/${id}`, { method: 'DELETE' }),
   actualizarEtapa: (id: number, etapa_crm: string) => request<Cliente>(`/clientes/${id}/etapa`, { method: 'PUT', body: JSON.stringify({ etapa_crm }) }),
 
-  // Interacciones
   getInteraccionesDeCliente: (clienteId: number) => request<Interaccion[]>(`/clientes/${clienteId}/interacciones`),
   crearInteraccion: (payload: { cliente_id: number; tipo: string; descripcion: string; fecha?: string }) =>
     request<Interaccion>('/interacciones', { method: 'POST', body: JSON.stringify(payload) }),
   getMiActividad: () => request<Interaccion[]>('/interacciones/mias'),
   getTodasInteracciones: () => request<Interaccion[]>('/interacciones'),
 
-  // Métricas CRM
   getMetricas: () => request<Metricas>('/metricas'),
 
-  // ── SCM: Proveedores ──
   getProveedores: (busqueda?: string) => request<Proveedor[]>(`/proveedores${busqueda ? `?busqueda=${encodeURIComponent(busqueda)}` : ''}`),
   crearProveedor: (payload: Partial<Proveedor>) => request<Proveedor>('/proveedores', { method: 'POST', body: JSON.stringify(payload) }),
   actualizarProveedor: (id: number, payload: Partial<Proveedor>) => request<Proveedor>(`/proveedores/${id}`, { method: 'PUT', body: JSON.stringify(payload) }),
   eliminarProveedor: (id: number) => request<null>(`/proveedores/${id}`, { method: 'DELETE' }),
 
-  // ── SCM: Productos ──
   getProductos: (params: { busqueda?: string; categoria?: string; estrategia_logistica?: string } = {}) => {
     const query = new URLSearchParams(Object.entries(params).filter(([, v]) => v) as [string, string][]).toString();
     return request<Producto[]>(`/productos${query ? `?${query}` : ''}`);
@@ -209,7 +198,6 @@ export const api = {
   actualizarEstrategia: (id: number, estrategia_logistica: 'PUSH' | 'PULL') =>
     request<Producto>(`/productos/${id}/estrategia`, { method: 'PUT', body: JSON.stringify({ estrategia_logistica }) }),
 
-  // ── SCM: Movimientos ──
   getMovimientos: (params: { tipo?: string; producto_id?: number } = {}) => {
     const query = new URLSearchParams(Object.entries(params).filter(([, v]) => v).map(([k, v]) => [k, String(v)])).toString();
     return request<MovimientoInventario[]>(`/movimientos${query ? `?${query}` : ''}`);
@@ -217,7 +205,6 @@ export const api = {
   crearMovimiento: (payload: { producto_id: number; tipo: 'entrada' | 'salida'; cantidad: number; motivo?: string; fecha?: string }) =>
     request<{ movimiento: MovimientoInventario; stock_actual: number }>('/movimientos', { method: 'POST', body: JSON.stringify(payload) }),
 
-  // ── SCM: Pedidos ──
   getPedidos: (params: { estado?: string; tipo?: string } = {}) => {
     const query = new URLSearchParams(Object.entries(params).filter(([, v]) => v) as [string, string][]).toString();
     return request<Pedido[]>(`/pedidos${query ? `?${query}` : ''}`);
@@ -228,7 +215,6 @@ export const api = {
   actualizarEstadoPedido: (id: number, estado: Pedido['estado']) => request<Pedido>(`/pedidos/${id}/estado`, { method: 'PUT', body: JSON.stringify({ estado }) }),
   eliminarPedido: (id: number) => request<null>(`/pedidos/${id}`, { method: 'DELETE' }),
 
-  // ── SCM: Métricas y madurez ──
   getMetricasScm: () => request<MetricasScm>('/scm/metricas'),
   getMadurezScm: () => request<MadurezScm>('/scm/madurez'),
   actualizarMadurezScm: (cambios: Partial<Record<keyof Omit<MadurezScm, 'nivel'>, boolean>>) =>

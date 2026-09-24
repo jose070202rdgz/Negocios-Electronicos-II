@@ -1,7 +1,6 @@
 const { Op } = require('sequelize');
 const { Producto, Proveedor } = require('../models');
 
-// POST /productos
 async function crearProducto(req, res) {
   try {
     const { nombre, descripcion, categoria, imagen_url, stock_actual, stock_minimo, costo_unitario, estrategia_logistica, proveedor_id } = req.body;
@@ -26,7 +25,6 @@ async function crearProducto(req, res) {
   }
 }
 
-// GET /productos?busqueda=&categoria=&estrategia_logistica=
 async function listarProductos(req, res) {
   try {
     const { busqueda, categoria, estrategia_logistica } = req.query;
@@ -41,8 +39,6 @@ async function listarProductos(req, res) {
       order: [['nombre', 'ASC']],
     });
 
-    // El "estado" de inventario (Normal / Stock bajo) se deriva aquí mismo,
-    // así el front no tiene que repetir esta regla de negocio.
     const conEstado = productos.map(p => {
       const json = p.toJSON();
       json.estado_inventario = json.stock_actual <= json.stock_minimo ? 'Stock bajo' : 'Normal';
@@ -55,7 +51,6 @@ async function listarProductos(req, res) {
   }
 }
 
-// GET /productos/:id
 async function obtenerProducto(req, res) {
   try {
     const producto = await Producto.findByPk(req.params.id, {
@@ -68,16 +63,12 @@ async function obtenerProducto(req, res) {
   }
 }
 
-// PUT /productos/:id
 async function actualizarProducto(req, res) {
   try {
     const producto = await Producto.findByPk(req.params.id);
     if (!producto) return res.status(404).json({ error: 'Producto no encontrado' });
 
     const { nombre, descripcion, categoria, imagen_url, stock_minimo, costo_unitario, proveedor_id } = req.body;
-    // stock_actual NO se edita aquí a propósito: solo cambia a través de
-    // /movimientos, para que el historial de inventario sea siempre la
-    // fuente de verdad y nunca quede desincronizado con el stock mostrado.
     await producto.update({
       nombre: nombre ?? producto.nombre,
       descripcion: descripcion ?? producto.descripcion,
@@ -95,7 +86,6 @@ async function actualizarProducto(req, res) {
   }
 }
 
-// DELETE /productos/:id
 async function eliminarProducto(req, res) {
   try {
     const producto = await Producto.findByPk(req.params.id);
@@ -107,7 +97,6 @@ async function eliminarProducto(req, res) {
   }
 }
 
-// PUT /productos/:id/estrategia — pantalla 9 "Configurar estrategia"
 async function actualizarEstrategia(req, res) {
   try {
     const { estrategia_logistica } = req.body;

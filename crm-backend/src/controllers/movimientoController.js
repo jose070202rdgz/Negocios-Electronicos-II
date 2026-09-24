@@ -1,9 +1,5 @@
 const { MovimientoInventario, Producto, Usuario, sequelize } = require('../models');
 
-// POST /movimientos
-// Crea el movimiento Y ajusta producto.stock_actual dentro de una misma
-// transacción: si algo falla a la mitad, no queda el stock desfasado
-// respecto al historial (ni viceversa).
 async function crearMovimiento(req, res) {
   const t = await sequelize.transaction();
   try {
@@ -57,7 +53,6 @@ async function crearMovimiento(req, res) {
   }
 }
 
-// GET /movimientos?tipo=&producto_id=
 async function listarMovimientos(req, res) {
   try {
     const { tipo, producto_id } = req.query;
