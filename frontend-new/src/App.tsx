@@ -1986,18 +1986,6 @@ export default function App() {
                   }}
                     className="w-full bg-sky-600 text-white text-sm py-2 rounded-lg hover:bg-sky-700 transition-colors">Guardar</button>
                 </div>
-                {/* Explicación Push vs Pull */}
-                <div className="bg-white rounded-xl border border-sky-100 p-5 shadow-sm space-y-3">
-                  <h2 className="text-sm font-semibold text-sky-900 mb-2">¿Qué significa cada estrategia?</h2>
-                  <div className="bg-amber-50 border border-amber-100 rounded-lg p-3">
-                    <p className="text-xs font-bold text-amber-700 mb-1">🔴 PUSH</p>
-                    <p className="text-xs text-slate-600">Se genera pedido automáticamente cuando el stock llega al mínimo. Producción/compra anticipada.</p>
-                  </div>
-                  <div className="bg-sky-50 border border-sky-100 rounded-lg p-3">
-                    <p className="text-xs font-bold text-sky-700 mb-1">🔵 PULL</p>
-                    <p className="text-xs text-slate-600">Se genera pedido solo bajo pedido o demanda real del cliente. Sin inventario anticipado.</p>
-                  </div>
-                </div>
               </div>
               {/* Comparativa por estrategia */}
               <div className="bg-white rounded-xl border border-sky-100 p-5 shadow-sm">
