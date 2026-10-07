@@ -327,8 +327,8 @@ const IcoTruck = () => <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" 
 const IcoChart = () => <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}><path strokeLinecap="round" strokeLinejoin="round" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg>;
 
 const NAV = [
-  { label: 'Dashboard',     s: 'dashboard'           as Screen, Icon: IcoGrid,      adminOnly: true  },
-  { label: 'Clientes',      s: 'clients'             as Screen, Icon: IcoBriefcase, adminOnly: true  },
+  { label: 'Inicio',        s: 'dashboard'           as Screen, Icon: IcoGrid,      adminOnly: true  },
+  { label: 'CRM',           s: 'clients'             as Screen, Icon: IcoBriefcase, adminOnly: true  },
   { label: 'Catálogo',      s: 'catalogo'            as Screen, Icon: IcoShop,      adminOnly: false },
   { label: 'SCM',           s: 'scm-home'            as Screen, Icon: IcoBox,       adminOnly: true  },
   { label: 'Interacciones', s: 'global-interactions' as Screen, Icon: IcoChat,      adminOnly: true  },
@@ -339,6 +339,16 @@ const NAV = [
 ];
 
 function Sidebar({ screen, setScreen, role }: { screen: Screen; setScreen: (s: Screen) => void; role: Role }) {
+  const scmSections: { label: string; s: Screen }[] = [
+    { label: 'Productos', s: 'scm-productos' },
+    { label: 'Proveedores', s: 'scm-proveedores' },
+    { label: 'Inventario', s: 'scm-inventario' },
+    { label: 'Movimientos', s: 'scm-movimientos' },
+    { label: 'Pedidos', s: 'scm-pedidos' },
+    { label: 'Logística', s: 'scm-logistica' },
+    { label: 'Madurez', s: 'scm-madurez' },
+    { label: 'Reportes', s: 'scm-reportes' },
+  ];
   const isActive = (s: Screen) => {
     if (s === 'clients'             && ['clients', 'client-detail', 'crm-stage'].includes(screen)) return true;
     if (s === 'global-interactions' && screen === 'interaction-history') return true;
@@ -360,14 +370,30 @@ function Sidebar({ screen, setScreen, role }: { screen: Screen; setScreen: (s: S
         {NAV.filter(({ adminOnly }) => role === 'admin' || !adminOnly).map(({ label, s, Icon }) => {
           const active = isActive(s);
           return (
-            <button key={label} onClick={() => setScreen(s)}
-              className={`w-full text-left flex items-center gap-3 px-5 py-2.5 text-[13px] transition-colors border-l-2 ${
-                active ? 'bg-sky-800 text-white border-sky-400' : 'text-sky-300 hover:text-white hover:bg-sky-900 border-transparent'
-              }`}
-            >
-              <Icon />
-              <span className="flex-1">{label}</span>
-            </button>
+            <div key={label}>
+              <button onClick={() => setScreen(s)}
+                className={`w-full text-left flex items-center gap-3 px-5 py-2.5 text-[13px] transition-colors border-l-2 ${
+                  active ? 'bg-sky-800 text-white border-sky-400' : 'text-sky-300 hover:text-white hover:bg-sky-900 border-transparent'
+                }`}
+              >
+                <Icon />
+                <span className="flex-1">{label}</span>
+              </button>
+              {s === 'scm-home' && role === 'admin' && screen.startsWith('scm-') && (
+                <div className="pb-1">
+                  {scmSections.map(section => (
+                    <button key={section.s} onClick={() => setScreen(section.s)}
+                      className={`w-full text-left flex items-center gap-2 pl-9 pr-3 py-2 text-xs transition-colors border-l-2 ${
+                        screen === section.s ? 'bg-teal-700 text-white border-teal-300' : 'text-sky-300 hover:text-white hover:bg-sky-900 border-transparent'
+                      }`}
+                    >
+                      <span aria-hidden="true">›</span>
+                      <span>{section.label}</span>
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
           );
         })}
       </nav>
