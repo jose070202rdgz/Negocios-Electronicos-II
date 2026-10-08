@@ -1,5 +1,5 @@
 const { Op } = require('sequelize');
-const { Proveedor } = require('../models');
+const { Proveedor, Producto, Pedido, MovimientoInventario, sequelize } = require('../models');
 
 async function crearProveedor(req, res) {
   try {
@@ -62,12 +62,31 @@ async function actualizarProveedor(req, res) {
 }
 
 async function eliminarProveedor(req, res) {
+  const t = await sequelize.transaction();
   try {
-    const proveedor = await Proveedor.findByPk(req.params.id);
-    if (!proveedor) return res.status(404).json({ error: 'Proveedor no encontrado' });
-    await proveedor.destroy();
+    const proveedor = await Proveedor.findByPk(req.params.id, { transaction: t, lock: t.LOCK.UPDATE });
+    if (!proveedor) { await t.rollback(); return res.status(404).json({ error: 'Proveedor no encontrado' }); }
+    const productos = await Producto.findAll({
+      where: { proveedor_id: proveedor.id },
+      attributes: ['id'],
+      transaction: t,
+    });
+    const productoIds = productos.map(producto => producto.id);
+    if (productoIds.length) {
+      await MovimientoInventario.destroy({ where: { producto_id: { [Op.in]: productoIds } }, transaction: t });
+      await Pedido.destroy({
+        where: { [Op.or]: [{ proveedor_id: proveedor.id }, { producto_id: { [Op.in]: productoIds } }] },
+        transaction: t,
+      });
+      await Producto.destroy({ where: { id: { [Op.in]: productoIds } }, transaction: t });
+    } else {
+      await Pedido.destroy({ where: { proveedor_id: proveedor.id }, transaction: t });
+    }
+    await proveedor.destroy({ transaction: t });
+    await t.commit();
     return res.status(204).send();
   } catch (err) {
+    if (!t.finished) await t.rollback();
     return res.status(500).json({ error: 'Error al eliminar proveedor', detalle: err.message });
   }
 }

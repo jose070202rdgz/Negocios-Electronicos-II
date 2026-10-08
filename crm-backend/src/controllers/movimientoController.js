@@ -1,4 +1,5 @@
 const { MovimientoInventario, Producto, Usuario, sequelize } = require('../models');
+const { crearPedidoPushSiNecesario } = require('../services/pedidoService');
 
 async function crearMovimiento(req, res) {
   const t = await sequelize.transaction();
@@ -45,8 +46,13 @@ async function crearMovimiento(req, res) {
       usuario_id: req.usuario.id,
     }, { transaction: t });
 
+    let pedidoAutomatico = null;
+    if (tipo === 'salida') {
+      pedidoAutomatico = await crearPedidoPushSiNecesario({ producto, usuarioId: req.usuario.id, transaction: t });
+    }
+
     await t.commit();
-    return res.status(201).json({ movimiento, stock_actual: nuevoStock });
+    return res.status(201).json({ movimiento, stock_actual: producto.stock_actual, pedido_automatico: pedidoAutomatico });
   } catch (err) {
     await t.rollback();
     return res.status(500).json({ error: 'Error al registrar el movimiento', detalle: err.message });

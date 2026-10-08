@@ -18,6 +18,15 @@ cp .env.example .env     # ajusta usuario/contraseña de tu MySQL
 
 Crea la base de datos vacía en MySQL (por ejemplo desde phpMyAdmin): `CREATE DATABASE crm_db;`
 Las tablas las crea Sequelize automáticamente al iniciar.
+Al iniciar el backend, los productos existentes se actualizan automáticamente para tener
+un stock mínimo de cinco unidades. El SQL `database/20261007_stock_minimo.sql` está disponible
+para aplicar ese ajuste manualmente si se requiere.
+Para reemplazar las categorías antiguas por categorías de productos de limpieza en una base
+existente, ejecuta `database/20261007_categorias_limpieza.sql` una sola vez.
+
+Para establecer una sola vez el stock actual de todos los productos en diez unidades y registrar
+el ajuste en movimientos, ejecuta `npm run ajustar:stock10` desde `crm-backend` con la conexión
+a la base de datos configurada en `.env`.
 
 ```bash
 npm run dev
@@ -25,11 +34,9 @@ npm run dev
 
 ## Permisos
 
-**Todo el módulo SCM es exclusivo del rol `admin`** (igual que Clientes,
-Interacciones y Métricas del CRM). El rol `usuario` solo tiene acceso a
-`/auth/me` y `/interacciones/mias`. Si más adelante quieres que el rol
-`usuario` vea, por ejemplo, el inventario en modo lectura, es un cambio
-pequeño (agregar la ruta a la lista de excepciones en `routes/`).
+**Las operaciones de escritura SCM son exclusivas del rol `admin`**. Los usuarios
+autenticados también pueden consultar `GET /productos` y `GET /productos/:id` para
+mostrar el catálogo; las demás operaciones SCM requieren rol `admin`.
 
 ## Endpoints — CRM
 
@@ -72,8 +79,10 @@ pequeño (agregar la ruta a la lista de excepciones en `routes/`).
   es un módulo adicional pequeño (una tabla de snapshots mensuales).
 - **stock_actual de un producto NO se edita directamente** desde `PUT /productos/:id` — solo cambia
   a través de `/movimientos`, para que el historial de inventario sea siempre la fuente de verdad.
-
-## Siguientes pasos
-
-El front-end (14 pantallas del módulo SCM) todavía no está conectado — lo hacemos en la próxima sesión,
-siguiendo el mismo patrón que usamos para el CRM.
+- Todos los productos tienen un stock mínimo de cinco unidades y deben estar ligados a un proveedor.
+- Al eliminar un producto o proveedor se eliminan también sus pedidos y movimientos relacionados; al eliminar
+  un proveedor también se eliminan los productos que dependen de él, previa confirmación en la interfaz.
+- Una salida que deje un producto PUSH por debajo del mínimo crea un pedido automático, evitando duplicarlo
+  mientras haya otro pedido abierto. Los pedidos de reposición PULL se capturan manualmente.
+- El pedido queda registrado en movimientos como pendiente; al cambiarlo a `surtido`, se registra la entrada
+  real y se actualiza el stock.

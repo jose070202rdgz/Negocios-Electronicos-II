@@ -8,7 +8,7 @@ async function obtenerMetricasScm(req, res) {
     const pedidosEnProceso = await Pedido.count({ where: { estado: 'en_proceso' } });
 
     const productos = await Producto.findAll();
-    const productosStockBajo = productos.filter(p => p.stock_actual <= p.stock_minimo);
+    const productosStockBajo = productos.filter(p => p.stock_actual < 5);
 
     const masVendidos = await MovimientoInventario.findAll({
       where: { tipo: 'salida' },
@@ -47,7 +47,7 @@ async function obtenerMetricasScm(req, res) {
       total_productos: totalProductos,
       total_proveedores: totalProveedores,
       pedidos_en_proceso: pedidosEnProceso,
-      productos_stock_bajo: productosStockBajo.map(p => ({ id: p.id, nombre: p.nombre, stock_actual: p.stock_actual, stock_minimo: p.stock_minimo })),
+      productos_stock_bajo: productosStockBajo.map(p => ({ id: p.id, nombre: p.nombre, stock_actual: p.stock_actual, stock_minimo: 5 })),
       productos_mas_vendidos: masVendidos.map(m => ({
         producto_id: m.producto_id,
         nombre: m.producto?.nombre ?? `Producto #${m.producto_id}`,

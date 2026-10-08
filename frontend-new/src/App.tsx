@@ -75,38 +75,48 @@ const mapInteraccion = (i: ApiInteraccion): Interaction => ({
 
 const ETAPAS = ['Prospecto', 'Activo', 'Frecuente', 'Inactivo'];
 
-const PRODUCTOS = [
-  {
-    id: 1,
-    nombre: 'Detergente Industrial BrilloMax Pro',
-    precio: 349.00,
-    unidad: 'Cubeta 20L',
+interface CatalogProduct {
+  id: number; nombre: string; precio: number; unidad: string; descripcion: string;
+  tags: string[]; emoji: string; color: string; imagen?: string | null;
+}
+
+const CATALOG_DETAILS: Record<string, Partial<CatalogProduct>> = {
+  'Detergente Industrial BrilloMax Pro': {
+    precio: 349, unidad: 'Cubeta 20L',
     descripcion: 'Fórmula concentrada de alto rendimiento para superficies industriales. Elimina grasa, aceite y suciedad pesada. Rinde hasta 200 aplicaciones.',
-    tags: ['Desengrasante', 'Alta concentración', 'Biodegradable'],
-    emoji: '🧴',
-    color: 'sky',
+    tags: ['Desengrasante', 'Alta concentración', 'Biodegradable'], emoji: '🧴', color: 'sky',
   },
-  {
-    id: 2,
-    nombre: 'Desinfectante Hospitalario CleanSafe',
-    precio: 189.50,
-    unidad: 'Botella 5L',
+  'Desinfectante Hospitalario CleanSafe': {
+    precio: 189.5, unidad: 'Botella 5L',
     descripcion: 'Desinfectante de amplio espectro certificado para uso en clínicas, hospitales y cocinas industriales. Elimina el 99.9% de bacterias y virus.',
-    tags: ['Antibacterial', 'Sin enjuague', 'Aroma cítrico'],
-    emoji: '🏥',
-    color: 'emerald',
+    tags: ['Antibacterial', 'Sin enjuague', 'Aroma cítrico'], emoji: '🏥', color: 'emerald',
   },
-  {
-    id: 3,
-    nombre: 'Multiusos Superficies BrilloShine',
-    precio: 95.00,
-    unidad: 'Galón 4L',
+  'Multiusos Superficies BrilloShine': {
+    precio: 95, unidad: 'Galón 4L',
     descripcion: 'Limpiador multiusos para vidrios, acero inoxidable, mármol y plásticos. Deja superficies brillantes sin residuos ni rayaduras.',
-    tags: ['Multiusos', 'Sin alcohol', 'Fragancia lavanda'],
-    emoji: '✨',
-    color: 'violet',
+    tags: ['Multiusos', 'Sin alcohol', 'Fragancia lavanda'], emoji: '✨', color: 'violet',
   },
-];
+};
+
+const mapCatalogProduct = (product: ApiProducto, index: number): CatalogProduct => {
+  const details = CATALOG_DETAILS[product.nombre];
+  const style = [
+    { emoji: '🧴', color: 'sky' },
+    { emoji: '🧼', color: 'emerald' },
+    { emoji: '✨', color: 'violet' },
+  ][index % 3];
+  return {
+    id: product.id,
+    nombre: product.nombre,
+    precio: Number(product.costo_unitario) || details?.precio || 0,
+    unidad: details?.unidad || 'Unidad',
+    descripcion: product.descripcion || details?.descripcion || 'Producto de limpieza y desinfección industrial.',
+    tags: details?.tags || [product.categoria, product.estrategia_logistica].filter((tag): tag is string => Boolean(tag)),
+    emoji: details?.emoji || style.emoji,
+    color: details?.color || style.color,
+    imagen: product.imagen_url,
+  };
+};
 
 interface ScmProducto {
   id: number; nombre: string; categoria: string; proveedor: string; proveedorId: number | null;
@@ -126,7 +136,7 @@ interface ScmPedido {
 
 const mapScmProducto = (p: ApiProducto): ScmProducto => ({
   id: p.id, nombre: p.nombre, categoria: p.categoria ?? '', proveedor: p.proveedor?.nombre ?? '',
-  proveedorId: p.proveedor_id, stock: p.stock_actual, stockMin: p.stock_minimo,
+  proveedorId: p.proveedor_id, stock: p.stock_actual, stockMin: 5,
   estrategia: p.estrategia_logistica, costo: Number(p.costo_unitario), descripcion: p.descripcion ?? '',
 });
 const mapScmProveedor = (p: ApiProveedor): ScmProveedor => ({
@@ -141,7 +151,15 @@ const mapScmPedido = (p: ApiPedido): ScmPedido => ({
   tipo: PED_TIPO_LABEL[p.tipo], proveedor: p.proveedor?.nombre ?? '', estado: PED_ESTADO_LABEL[p.estado], notas: p.notas ?? '',
 });
 
-const SCM_CATEGORIAS = ['Cerámica', 'Textil', 'Decoración', 'Joyería'];
+const SCM_CATEGORIAS = [
+  'Detergentes',
+  'Desinfectantes',
+  'Desengrasantes',
+  'Limpiadores multiusos',
+  'Limpieza de pisos',
+  'Accesorios de limpieza',
+  'Otros productos de limpieza',
+];
 const SCM_MOTIVOS    = ['Compra', 'Venta', 'Ajuste', 'Pedido', 'Devolución'];
 
 const nameOk  = (n: string) => n.trim().length >= 3 && !/\d/.test(n);
@@ -482,6 +500,9 @@ export default function App() {
   const [showModal, setShowModal]       = useState(false); // modal de nueva interacción
   const [carrito, setCarrito]           = useState<Record<number, number>>({});
   const [carritoOpen, setCarritoOpen]   = useState(false);
+  const [catalogProducts, setCatalogProducts] = useState<CatalogProduct[]>([]);
+  const [catalogLoading, setCatalogLoading] = useState(false);
+  const [catalogError, setCatalogError] = useState('');
 
   const [showClientModal, setShowClientModal] = useState(false);
   const [editingClient, setEditingClient]     = useState<Client | null>(null);
@@ -491,7 +512,7 @@ export default function App() {
   const agregarAlCarrito = (id: number) => setCarrito(prev => ({ ...prev, [id]: (prev[id] ?? 0) + 1 }));
   const quitarDelCarrito = (id: number) => setCarrito(prev => { const n = { ...prev }; if (n[id] > 1) n[id]--; else delete n[id]; return n; });
   const totalCarrito = Object.values(carrito).reduce((s, q) => s + q, 0);
-  const totalPrecio  = Object.entries(carrito).reduce((s, [id, q]) => s + (PRODUCTOS.find(p => p.id === Number(id))?.precio ?? 0) * q, 0);
+  const totalPrecio  = Object.entries(carrito).reduce((s, [id, q]) => s + (catalogProducts.find(p => p.id === Number(id))?.precio ?? 0) * q, 0);
 
   const [clientInteractions, setClientInteractions] = useState<Interaction[]>([]);
   const [clientIntLoading, setClientIntLoading]     = useState(false);
@@ -526,7 +547,7 @@ export default function App() {
   const [editingScmPedido, setEditingScmPedido]       = useState<ScmPedido | null>(null);
   const [scmFormError, setScmFormError] = useState('');
 
-  const [scmPF, setScmPF] = useState({ nombre:'', categoria:'Cerámica', proveedor:'', stock:0, stockMin:0, estrategia:'PUSH' as 'PUSH'|'PULL', costo:0, descripcion:'' });
+  const [scmPF, setScmPF] = useState({ nombre:'', categoria:'Detergentes', proveedor:'', stock:0, stockMin:5, estrategia:'PUSH' as 'PUSH'|'PULL', costo:0, descripcion:'' });
   const [scmPrF, setScmPrF] = useState({ nombre:'', contacto:'', correo:'', telefono:'', direccion:'' });
   const [scmMF, setScmMF] = useState({ producto:'', tipo:'Entrada' as 'Entrada'|'Salida', cantidad:0, motivo:'Compra', fecha:'', usuario:'' });
   const [scmOF, setScmOF] = useState({ producto:'', cantidad:0, tipo:'Reposición' as 'Reposición'|'Venta', proveedor:'', fecha:'', notas:'' });
@@ -643,6 +664,20 @@ export default function App() {
     catch (err) { setGlobalError(err instanceof ApiError ? err.message : 'No se pudo cargar la lista de usuarios'); }
     finally { setUsersLoading(false); }
   }
+  async function reloadCatalogProducts() {
+    setCatalogLoading(true);
+    setCatalogError('');
+    try {
+      const mapped = (await api.getProductos()).map(mapCatalogProduct);
+      setCatalogProducts(mapped);
+      const existingIds = new Set(mapped.map(product => product.id));
+      setCarrito(current => Object.fromEntries(Object.entries(current).filter(([id]) => existingIds.has(Number(id)))));
+    } catch (err) {
+      setCatalogError(err instanceof ApiError ? err.message : 'No se pudo cargar el catálogo');
+    } finally {
+      setCatalogLoading(false);
+    }
+  }
   const [reportClientesAll, setReportClientesAll] = useState<Client[]>([]);
   const [reportInteraccionesAll, setReportInteraccionesAll] = useState<Interaction[]>([]);
   async function reloadReportesExtra() {
@@ -696,6 +731,7 @@ export default function App() {
   useEffect(() => { if (screen === 'dashboard' || screen === 'reports') reloadMetricas(); }, [screen]);
   useEffect(() => { if (screen === 'reports') reloadReportesExtra(); }, [screen]);
   useEffect(() => { if (screen === 'usuarios') reloadUsers(); }, [screen]);
+  useEffect(() => { if (screen === 'catalogo') reloadCatalogProducts(); }, [screen]);
   useEffect(() => {
     if (screen.startsWith('scm-') && screen !== 'scm-home') reloadScmBase();
   }, [screen]);
@@ -740,17 +776,20 @@ export default function App() {
 
   async function handleSaveScmProducto() {
     if (!scmPF.nombre.trim()) { setScmFormError('El nombre es obligatorio'); return; }
-    const proveedorSel = scmProveedores.find(p => p.nombre === scmPF.proveedor);
+    const proveedorSel = scmProveedores.find(p => p.id === Number(scmPF.proveedor));
+    if (!proveedorSel) { setScmFormError('Selecciona un proveedor para el producto'); return; }
     const payload = {
       nombre: scmPF.nombre, descripcion: scmPF.descripcion, categoria: scmPF.categoria,
-      stock_actual: scmPF.stock, stock_minimo: scmPF.stockMin, costo_unitario: scmPF.costo,
-      estrategia_logistica: scmPF.estrategia, proveedor_id: proveedorSel?.id ?? null,
+      stock_actual: scmPF.stock, stock_minimo: 5, costo_unitario: scmPF.costo,
+      estrategia_logistica: scmPF.estrategia, proveedor_id: proveedorSel.id,
     };
     try {
       if (editingScmProducto) await api.actualizarProducto(editingScmProducto.id, payload);
       else await api.crearProducto(payload);
       setScmModal(null);
       reloadScmBase();
+      reloadScmPedidos();
+      reloadScmMovimientos();
     } catch (err) { setScmFormError(err instanceof ApiError ? err.message : 'No se pudo guardar el producto'); }
   }
 
@@ -772,7 +811,8 @@ export default function App() {
       await api.crearMovimiento({ producto_id: prod.id, tipo: MOV_TIPO_VALUE[scmMF.tipo], cantidad: scmMF.cantidad, motivo: scmMF.motivo, fecha: scmMF.fecha || undefined });
       setScmModal(null);
       reloadScmBase();
-      if (screen === 'scm-movimientos') reloadScmMovimientos();
+      reloadScmMovimientos();
+      reloadScmPedidos();
     } catch (err) { setScmFormError(err instanceof ApiError ? err.message : 'No se pudo registrar el movimiento'); }
   }
 
@@ -780,7 +820,12 @@ export default function App() {
     const prod = scmProductos.find(p => p.nombre === scmOF.producto);
     if (!prod) { setScmFormError('Selecciona un producto'); return; }
     if (!scmOF.cantidad || scmOF.cantidad <= 0) { setScmFormError('La cantidad debe ser mayor a 0'); return; }
-    const prov = scmProveedores.find(p => p.nombre === scmOF.proveedor);
+    if (!editingScmPedido && scmOF.tipo === 'Reposición' && prod.estrategia !== 'PULL') {
+      setScmFormError('Los productos PUSH generan pedidos automáticamente; selecciona un producto PULL');
+      return;
+    }
+    const prov = scmProveedores.find(p => p.id === prod.proveedorId);
+    if (scmOF.tipo === 'Reposición' && !prov) { setScmFormError('El producto no tiene un proveedor asignado'); return; }
     try {
       if (editingScmPedido) {
         await api.actualizarPedido(editingScmPedido.id, { cantidad: scmOF.cantidad, tipo: PED_TIPO_VALUE[scmOF.tipo] as 'reposicion' | 'venta', proveedor_id: prov?.id, notas: scmOF.notas });
@@ -789,6 +834,7 @@ export default function App() {
       }
       setScmModal(null);
       reloadScmPedidos();
+      reloadScmMovimientos();
     } catch (err) { setScmFormError(err instanceof ApiError ? err.message : 'No se pudo guardar el pedido'); }
   }
 
@@ -1434,8 +1480,13 @@ export default function App() {
                 </button>
               </div>
 
-              <div className="grid grid-cols-3 gap-5">
-                {PRODUCTOS.map(p => {
+              {catalogLoading && <p className="py-8 text-center text-sm text-slate-400">Cargando catálogo…</p>}
+              {catalogError && <p className="mb-4 rounded-lg bg-red-50 px-4 py-3 text-sm text-red-600">{catalogError}</p>}
+              {!catalogLoading && !catalogError && catalogProducts.length === 0 && (
+                <p className="py-8 text-center text-sm text-slate-400">No hay productos disponibles en el catálogo.</p>
+              )}
+              <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
+                {catalogProducts.map(p => {
                   const qty = carrito[p.id] ?? 0;
                   const accentBg: Record<string, string> = { sky: 'bg-sky-50', emerald: 'bg-emerald-50', violet: 'bg-violet-50' };
                   const accentText: Record<string, string> = { sky: 'text-sky-600', emerald: 'text-emerald-600', violet: 'text-violet-600' };
@@ -1444,7 +1495,7 @@ export default function App() {
                   return (
                     <div key={p.id} className={`bg-white rounded-2xl border ${accentBorder[p.color]} shadow-sm overflow-hidden flex flex-col`}>
                       <div className={`${accentBg[p.color]} flex items-center justify-center h-36 text-6xl`}>
-                        {p.emoji}
+                        {p.imagen ? <img src={p.imagen} alt={p.nombre} className="h-full w-full object-contain" /> : p.emoji}
                       </div>
                       <div className="p-4 flex-1 flex flex-col">
                         <h2 className="text-sm font-semibold text-sky-900 leading-snug mb-1">{p.nombre}</h2>
@@ -1490,7 +1541,8 @@ export default function App() {
                     <>
                       <div className="space-y-3 mb-4">
                         {Object.entries(carrito).map(([id, qty]) => {
-                          const prod = PRODUCTOS.find(p => p.id === Number(id))!;
+                          const prod = catalogProducts.find(p => p.id === Number(id));
+                          if (!prod) return null;
                           return (
                             <div key={id} className="flex items-center justify-between text-sm">
                               <div className="flex items-center gap-2">
@@ -1710,7 +1762,7 @@ export default function App() {
               </div>
               <div className="flex items-center justify-between mb-5">
                 <h1 className="text-xl font-semibold text-sky-900">Productos</h1>
-                <button onClick={() => { setEditingScmProducto(null); setScmFormError(''); setScmPF({ nombre:'', categoria:'Cerámica', proveedor:'', stock:0, stockMin:0, estrategia:'PUSH', costo:0, descripcion:'' }); setScmModal('producto'); }}
+                <button onClick={() => { setEditingScmProducto(null); setScmFormError(''); setScmPF({ nombre:'', categoria:'Detergentes', proveedor:'', stock:0, stockMin:5, estrategia:'PUSH', costo:0, descripcion:'' }); setScmModal('producto'); }}
                   className="bg-sky-600 text-white text-sm px-4 py-2 rounded-lg hover:bg-sky-700 transition-colors shadow-sm">+ Nuevo producto</button>
               </div>
               <div className="flex gap-3 mb-4">
@@ -1720,16 +1772,17 @@ export default function App() {
               <div className="bg-white rounded-xl border border-sky-100 overflow-hidden shadow-sm">
                 <table className="w-full text-sm">
                   <thead><tr className="border-b border-sky-100 bg-sky-50">
-                    {['Nombre','Categoría','Stock','Stock mín.','Estrategia','Acciones'].map(h => (
+                    {['Nombre','Categoría','Proveedor','Stock','Stock mín.','Estrategia','Acciones'].map(h => (
                       <th key={h} className="text-left text-xs font-medium text-sky-600 px-4 py-3 whitespace-nowrap">{h}</th>
                     ))}
                   </tr></thead>
                   <tbody>
-                    {scmLoading && <tr><td colSpan={6} className="px-4 py-6 text-center text-slate-400 text-sm">Cargando…</td></tr>}
+                    {scmLoading && <tr><td colSpan={7} className="px-4 py-6 text-center text-slate-400 text-sm">Cargando…</td></tr>}
                     {!scmLoading && scmProductos.filter(p => !scmSearch || p.nombre.toLowerCase().includes(scmSearch.toLowerCase())).map(p => (
                       <tr key={p.id} className="border-b border-sky-50 last:border-0 hover:bg-sky-50 transition-colors">
                         <td className="px-4 py-3 font-medium text-sky-900">{p.nombre}</td>
                         <td className="px-4 py-3 text-slate-500">{p.categoria}</td>
+                        <td className="px-4 py-3 text-slate-600">{p.proveedor || 'Sin proveedor'}</td>
                         <td className="px-4 py-3 text-slate-700 font-medium">{p.stock}</td>
                         <td className="px-4 py-3 text-slate-500">{p.stockMin}</td>
                         <td className="px-4 py-3">
@@ -1737,7 +1790,7 @@ export default function App() {
                         </td>
                         <td className="px-4 py-3">
                           <div className="flex items-center gap-2">
-                            <button title="Editar" onClick={() => { setEditingScmProducto(p); setScmFormError(''); setScmPF({ nombre: p.nombre, categoria: p.categoria, proveedor: p.proveedor, stock: p.stock, stockMin: p.stockMin, estrategia: p.estrategia, costo: p.costo, descripcion: p.descripcion }); setScmModal('producto'); }}
+                            <button title="Editar" onClick={() => { setEditingScmProducto(p); setScmFormError(''); setScmPF({ nombre: p.nombre, categoria: p.categoria, proveedor: String(p.proveedorId ?? ''), stock: p.stock, stockMin: p.stockMin, estrategia: p.estrategia, costo: p.costo, descripcion: p.descripcion }); setScmModal('producto'); }}
                               className="text-amber-400 hover:text-amber-600 transition-colors"><IcoPencil /></button>
                             <button title="Eliminar" onClick={async () => {
                               if (!window.confirm(`¿Eliminar "${p.nombre}"?`)) return;
@@ -1789,7 +1842,7 @@ export default function App() {
                             <button title="Editar" onClick={() => { setEditingScmProveedor(p); setScmFormError(''); setScmPrF({ nombre: p.nombre, contacto: p.contacto, correo: p.correo, telefono: p.telefono, direccion: p.direccion }); setScmModal('proveedor'); }}
                               className="text-amber-400 hover:text-amber-600 transition-colors"><IcoPencil /></button>
                             <button title="Eliminar" onClick={async () => {
-                              if (!window.confirm(`¿Eliminar a "${p.nombre}"?`)) return;
+                              if (!window.confirm(`¿Eliminar a "${p.nombre}"? También se eliminarán sus productos asociados y el historial de pedidos y movimientos.`)) return;
                               try { await api.eliminarProveedor(p.id); reloadScmBase(); }
                               catch (err) { setGlobalError(err instanceof ApiError ? err.message : 'No se pudo eliminar el proveedor'); }
                             }} className="text-slate-300 hover:text-red-400 transition-colors"><IcoTrash /></button>
@@ -1826,7 +1879,7 @@ export default function App() {
                   </tr></thead>
                   <tbody>
                     {scmProductos.filter(p => !scmSearch || p.nombre.toLowerCase().includes(scmSearch.toLowerCase())).map(p => {
-                      const bajo = p.stock <= p.stockMin;
+                      const bajo = p.stock < 5;
                       return (
                         <tr key={p.id} className="border-b border-sky-50 last:border-0 hover:bg-sky-50 transition-colors">
                           <td className="px-4 py-3 font-medium text-sky-900">{p.nombre}</td>
@@ -1927,7 +1980,12 @@ export default function App() {
                   <button onClick={async () => {
                     const p = scmProductos.find(x => x.nombre === logProd);
                     if (!p) return;
-                    try { await api.actualizarEstrategia(p.id, logEst); reloadScmBase(); }
+                    try {
+                      await api.actualizarEstrategia(p.id, logEst);
+                      reloadScmBase();
+                      reloadScmPedidos();
+                      reloadScmMovimientos();
+                    }
                     catch (err) { setGlobalError(err instanceof ApiError ? err.message : 'No se pudo actualizar la estrategia'); }
                   }}
                     className="w-full bg-sky-600 text-white text-sm py-2 rounded-lg hover:bg-sky-700 transition-colors">Guardar</button>
@@ -2013,7 +2071,12 @@ export default function App() {
                             <td className="px-4 py-3 text-slate-500">{p.tipo}</td>
                             <td className="px-4 py-3">
                               <select value={p.estado} onChange={async e => {
-                                try { await api.actualizarEstadoPedido(p.id, PED_ESTADO_VALUE[e.target.value] as any); reloadScmPedidos(); }
+                                try {
+                                  const nuevoEstado = e.target.value;
+                                  await api.actualizarEstadoPedido(p.id, PED_ESTADO_VALUE[nuevoEstado] as any);
+                                  reloadScmPedidos();
+                                  if (nuevoEstado === 'Surtido') { reloadScmBase(); reloadScmMovimientos(); }
+                                }
                                 catch (err) { setGlobalError(err instanceof ApiError ? err.message : 'No se pudo cambiar el estado'); }
                               }} className={`text-xs font-medium rounded px-2 py-0.5 border-0 outline-none ${estadoCls[p.estado]}`}>
                                 {['Pendiente','En proceso','Surtido','Cancelado'].map(s => <option key={s} value={s}>{s}</option>)}
@@ -2313,7 +2376,7 @@ export default function App() {
                       <select value={scmPF.proveedor} onChange={e => setScmPF(f => ({ ...f, proveedor: e.target.value }))}
                         className="w-full border border-sky-200 rounded-lg px-3 py-2 text-sm outline-none focus:border-sky-500 bg-white">
                         <option value="">Selecciona un proveedor</option>
-                        {scmProveedores.map(p => <option key={p.id}>{p.nombre}</option>)}
+                        {scmProveedores.map(p => <option key={p.id} value={String(p.id)}>{p.nombre}</option>)}
                       </select></div>
                   </div>
                   <div className="grid grid-cols-2 gap-3">
@@ -2321,8 +2384,8 @@ export default function App() {
                       <input type="number" value={scmPF.stock} onChange={e => setScmPF(f => ({ ...f, stock: Number(e.target.value) }))}
                         className="w-full border border-sky-200 rounded-lg px-3 py-2 text-sm outline-none focus:border-sky-500" /></div>
                     <div><label className="block text-xs font-medium text-slate-700 mb-1">Stock mínimo</label>
-                      <input type="number" value={scmPF.stockMin} onChange={e => setScmPF(f => ({ ...f, stockMin: Number(e.target.value) }))}
-                        className="w-full border border-sky-200 rounded-lg px-3 py-2 text-sm outline-none focus:border-sky-500" /></div>
+                      <input type="number" value={5} readOnly
+                        className="w-full border border-sky-200 rounded-lg px-3 py-2 text-sm bg-slate-50 text-slate-500" /></div>
                   </div>
                   <div className="grid grid-cols-2 gap-3">
                     <div><label className="block text-xs font-medium text-slate-700 mb-1">Estrategia logística</label>
@@ -2417,7 +2480,10 @@ export default function App() {
                 </div>
                 <div className="p-5 space-y-3">
                   <div><label className="block text-xs font-medium text-slate-700 mb-1">Producto</label>
-                    <select value={scmOF.producto} onChange={e => setScmOF(f => ({ ...f, producto: e.target.value }))}
+                    <select value={scmOF.producto} onChange={e => {
+                      const producto = scmProductos.find(p => p.nombre === e.target.value);
+                      setScmOF(f => ({ ...f, producto: e.target.value, proveedor: scmProveedores.find(prov => prov.id === producto?.proveedorId)?.nombre ?? '' }));
+                    }}
                       className="w-full border border-sky-200 rounded-lg px-3 py-2 text-sm outline-none focus:border-sky-500 bg-white">
                       <option value="">Selecciona un producto</option>
                       {scmProductos.map(p => <option key={p.id}>{p.nombre}</option>)}
@@ -2428,14 +2494,11 @@ export default function App() {
                   <div><label className="block text-xs font-medium text-slate-700 mb-1">Tipo</label>
                     <select value={scmOF.tipo} onChange={e => setScmOF(f => ({ ...f, tipo: e.target.value as 'Reposición'|'Venta' }))}
                       className="w-full border border-sky-200 rounded-lg px-3 py-2 text-sm outline-none focus:border-sky-500 bg-white">
-                      <option>Reposición</option><option>Venta</option>
+                      <option value="Reposición" disabled={!!scmOF.producto && scmProductos.find(p => p.nombre === scmOF.producto)?.estrategia !== 'PULL'}>Reposición (manual PULL)</option><option value="Venta">Venta</option>
                     </select></div>
                   <div><label className="block text-xs font-medium text-slate-700 mb-1">Proveedor</label>
-                    <select value={scmOF.proveedor} onChange={e => setScmOF(f => ({ ...f, proveedor: e.target.value }))}
-                      className="w-full border border-sky-200 rounded-lg px-3 py-2 text-sm outline-none focus:border-sky-500 bg-white">
-                      <option value="">Selecciona un proveedor</option>
-                      {scmProveedores.map(p => <option key={p.id}>{p.nombre}</option>)}
-                    </select></div>
+                    <input value={scmOF.proveedor} readOnly placeholder="Se asigna desde el producto"
+                      className="w-full border border-sky-200 rounded-lg px-3 py-2 text-sm bg-slate-50 text-slate-600" /></div>
                   <div><label className="block text-xs font-medium text-slate-700 mb-1">Fecha</label>
                     <input type="date" value={scmOF.fecha} onChange={e => setScmOF(f => ({ ...f, fecha: e.target.value }))}
                       className="w-full border border-sky-200 rounded-lg px-3 py-2 text-sm outline-none focus:border-sky-500" /></div>
