@@ -145,6 +145,10 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
   const res = await fetch(`${API_URL}${path}`, { ...options, headers });
 
   if (!res.ok) {
+    if (res.status === 401 && getToken()) {
+      clearSession();
+      window.dispatchEvent(new Event('crm:session-expired'));
+    }
     let mensaje = `Error ${res.status}`;
     try { const data = await res.json(); mensaje = data.error || mensaje; } catch { }
     throw new ApiError(mensaje);

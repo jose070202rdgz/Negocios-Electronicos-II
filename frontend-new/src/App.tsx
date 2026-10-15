@@ -146,6 +146,23 @@ const mapScmMovimiento = (m: ApiMovimiento): ScmMovimiento => ({
   id: m.id, fecha: fmtFecha(m.fecha), producto: m.producto?.nombre ?? '', tipo: MOV_TIPO_LABEL[m.tipo],
   cantidad: m.cantidad, motivo: m.motivo ?? '', usuario: m.usuario?.nombre ?? '',
 });
+
+function getMonthlyExits(movimientos: ApiMovimiento[]) {
+  const now = new Date();
+  return Array.from({ length: 6 }, (_, index) => {
+    const month = new Date(now.getFullYear(), now.getMonth() - 5 + index, 1);
+    const total = movimientos.reduce((sum, movimiento) => {
+      const fecha = new Date(movimiento.fecha);
+      return fecha.getFullYear() === month.getFullYear() && fecha.getMonth() === month.getMonth()
+        ? sum + movimiento.cantidad
+        : sum;
+    }, 0);
+    return {
+      label: new Intl.DateTimeFormat('es-MX', { month: 'short' }).format(month).replace('.', ''),
+      total,
+    };
+  });
+}
 const mapScmPedido = (p: ApiPedido): ScmPedido => ({
   id: p.id, folio: p.folio, fecha: fmtFecha(p.fecha), producto: p.producto?.nombre ?? '', cantidad: p.cantidad,
   tipo: PED_TIPO_LABEL[p.tipo], proveedor: p.proveedor?.nombre ?? '', estado: PED_ESTADO_LABEL[p.estado], notas: p.notas ?? '',
@@ -523,6 +540,7 @@ export default function App() {
 
   const [metricas, setMetricas]           = useState<Metricas | null>(null);
   const [metricasLoading, setMetricasLoading] = useState(false);
+  const [dashboardMovimientos, setDashboardMovimientos] = useState<ApiMovimiento[]>([]);
 
   const [users, setUsers]           = useState<AppUser[]>([]);
   const [usersLoading, setUsersLoading] = useState(false);
@@ -658,6 +676,26 @@ export default function App() {
     catch (err) { setGlobalError(err instanceof ApiError ? err.message : 'No se pudieron cargar las métricas'); }
     finally { setMetricasLoading(false); }
   }
+  async function reloadDashboard() {
+    setMetricasLoading(true);
+    setScmLoading(true);
+    setGlobalError('');
+    try {
+      const [crm, scm, movimientos] = await Promise.all([
+        api.getMetricas(),
+        api.getMetricasScm(),
+        api.getMovimientos({ tipo: 'salida' }),
+      ]);
+      setMetricas(crm);
+      setScmMetricas(scm);
+      setDashboardMovimientos(movimientos);
+    } catch (err) {
+      setGlobalError(err instanceof ApiError ? err.message : 'No se pudo cargar el dashboard');
+    } finally {
+      setMetricasLoading(false);
+      setScmLoading(false);
+    }
+  }
   async function reloadUsers() {
     setUsersLoading(true);
     try { setUsers((await api.getUsuarios()).map(mapUsuario)); }
@@ -728,10 +766,28 @@ export default function App() {
   useEffect(() => { if ((screen === 'client-detail' || screen === 'interaction-history') && selectedClient) reloadClientInteractions(selectedClient.id); }, [screen, selectedClient]);
   useEffect(() => { if (screen === 'global-interactions') reloadGlobalInteractions(); }, [screen]);
   useEffect(() => { if (screen === 'my-activity') reloadMyActivities(); }, [screen]);
-  useEffect(() => { if (screen === 'dashboard' || screen === 'reports') reloadMetricas(); }, [screen]);
+  useEffect(() => {
+    if (screen === 'dashboard') reloadDashboard();
+    if (screen === 'reports') reloadMetricas();
+  }, [screen]);
   useEffect(() => { if (screen === 'reports') reloadReportesExtra(); }, [screen]);
   useEffect(() => { if (screen === 'usuarios') reloadUsers(); }, [screen]);
   useEffect(() => { if (screen === 'catalogo') reloadCatalogProducts(); }, [screen]);
+  useEffect(() => {
+    const handleSessionExpired = () => {
+      setCurrentUser(null);
+      setScreen('login');
+      setLoginPass('');
+      setLoginErr('Tu sesión venció. Inicia sesión nuevamente.');
+    };
+    window.addEventListener('crm:session-expired', handleSessionExpired);
+
+    if (getToken()) {
+      api.getMiPerfil().then(setCurrentUser).catch(() => {});
+    }
+
+    return () => window.removeEventListener('crm:session-expired', handleSessionExpired);
+  }, []);
   useEffect(() => {
     if (screen.startsWith('scm-') && screen !== 'scm-home') reloadScmBase();
   }, [screen]);
@@ -1056,6 +1112,11 @@ export default function App() {
   );
 
   const filteredClients = clients;
+  const monthlyExits = getMonthlyExits(dashboardMovimientos);
+  const maxMonthlyExit = Math.max(...monthlyExits.map(month => month.total), 1);
+  const topProducts = scmMetricas?.productos_mas_vendidos.slice(0, 5) ?? [];
+  const maxProductSales = Math.max(...topProducts.map(product => product.total_vendido), 1);
+  const totalUnitsDispatched = scmMetricas?.productos_mas_vendidos.reduce((total, product) => total + product.total_vendido, 0) ?? 0;
 
   return (
     <div className="flex h-screen bg-sky-50 overflow-hidden">
@@ -1065,55 +1126,119 @@ export default function App() {
         <main className="flex-1 overflow-auto">
 
           {screen === 'dashboard' && (
-            <div className="p-6 max-w-5xl">
-              <h1 className="text-xl font-semibold text-sky-900 mb-0.5">Resumen CRM</h1>
-              <p className="text-sm text-slate-400 mb-5">Vista general de indicadores clave · Productos de Limpieza</p>
-              {metricasLoading && <p className="text-sm text-slate-400 mb-4">Cargando métricas…</p>}
-              {metricas && (
-                <>
-                  <div className="grid grid-cols-4 gap-4 mb-5">
-                    {[
-                      { label: 'Total de clientes',         value: String(metricas.total_clientes), sub: 'Todos los clientes', hi: false, dim: false },
-                      { label: 'Clientes activos',          value: String(metricas.clientes_activos), sub: metricas.total_clientes ? `${Math.round((metricas.clientes_activos / metricas.total_clientes) * 100)}% del total` : '', hi: true, dim: false },
-                      { label: 'Interacciones registradas', value: String(metricas.interacciones_por_cliente.reduce((s, r) => s + Number(r.total_interacciones), 0)), sub: 'Total acumulado', hi: true, dim: false },
-                      { label: 'Clientes sin interacción',  value: String(metricas.clientes_sin_interaccion_reciente.length), sub: 'Últimos 30 días', hi: false, dim: true },
-                    ].map(s => (
-                      <div key={s.label} className="bg-white rounded-xl border border-sky-100 p-4 shadow-sm">
-                        <p className="text-xs text-slate-500 leading-snug mb-2">{s.label}</p>
-                        <p className={`text-3xl font-bold ${s.dim ? 'text-amber-500' : s.hi ? 'text-sky-600' : 'text-sky-900'}`}>{s.value}</p>
-                        <p className="text-xs text-slate-400 mt-1">{s.sub}</p>
-                      </div>
-                    ))}
+            <div className="mx-auto max-w-7xl p-4 sm:p-6">
+              <div className="mb-5 flex flex-wrap items-end justify-between gap-3">
+                <div>
+                  <p className="mb-1 text-[11px] font-semibold uppercase tracking-[0.16em] text-sky-600">Brillo Max · Operaciones</p>
+                  <h1 className="text-2xl font-semibold text-sky-950">Dashboard general</h1>
+                  <p className="mt-1 text-sm text-slate-500">Vista integrada de clientes, ventas e inventario.</p>
+                </div>
+                <p className="text-xs text-slate-400">Actualizado al {new Date().toLocaleDateString('es-MX', { day: 'numeric', month: 'long', year: 'numeric' })}</p>
+              </div>
+
+              {metricasLoading && <p className="mb-3 text-sm text-slate-500">Cargando indicadores…</p>}
+              {globalError && <p className="mb-3 text-sm text-rose-600">{globalError}</p>}
+
+              <div className="mb-5 grid grid-cols-1 gap-3 sm:grid-cols-3">
+                <div className="flex min-h-28 items-center gap-4 rounded-lg border border-emerald-100 bg-emerald-50 p-4">
+                  <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-md bg-white text-emerald-700"><IcoPeople /></div>
+                  <div className="min-w-0">
+                    <p className="text-xs font-medium text-emerald-900">Clientes activos</p>
+                    <p className="mt-0.5 text-2xl font-bold tabular-nums text-slate-900">{metricas?.clientes_activos ?? '—'}</p>
+                    <p className="text-xs text-slate-500">{metricas?.total_clientes ?? 0} registrados en CRM</p>
                   </div>
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="bg-white rounded-xl border border-sky-100 p-4 shadow-sm">
-                      <h2 className="text-sm font-semibold text-sky-900 mb-4">Clientes activos vs inactivos</h2>
-                      <div className="flex items-center gap-5">
-                        <DonutChart pct={metricas.total_clientes ? (metricas.clientes_activos / metricas.total_clientes) * 100 : 0} />
-                        <div className="space-y-2.5">
-                          <div className="flex items-center gap-2.5 text-sm"><div className="w-3 h-3 rounded-sm bg-sky-600" /><span className="text-slate-700">Activos <strong>{metricas.clientes_activos}</strong></span></div>
-                          <div className="flex items-center gap-2.5 text-sm"><div className="w-3 h-3 rounded-sm bg-sky-100 border border-sky-200" /><span className="text-slate-700">Inactivos <strong>{metricas.clientes_inactivos}</strong></span></div>
-                        </div>
+                </div>
+                <div className="flex min-h-28 items-center gap-4 rounded-lg border border-sky-100 bg-sky-50 p-4">
+                  <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-md bg-white text-sky-700"><IcoBox /></div>
+                  <div className="min-w-0">
+                    <p className="text-xs font-medium text-sky-900">Pedidos en proceso</p>
+                    <p className="mt-0.5 text-2xl font-bold tabular-nums text-slate-900">{scmMetricas?.pedidos_en_proceso ?? '—'}</p>
+                    <p className="text-xs text-slate-500">Seguimiento de pedidos SCM</p>
+                  </div>
+                </div>
+                <div className="flex min-h-28 items-center gap-4 rounded-lg border border-amber-100 bg-amber-50 p-4">
+                  <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-md bg-white text-amber-600"><IcoChart /></div>
+                  <div className="min-w-0">
+                    <p className="text-xs font-medium text-amber-900">Unidades despachadas</p>
+                    <p className="mt-0.5 text-2xl font-bold tabular-nums text-slate-900">{scmMetricas ? totalUnitsDispatched.toLocaleString('es-MX') : '—'}</p>
+                    <p className="text-xs text-slate-500">Salidas acumuladas de inventario</p>
+                  </div>
+                </div>
+              </div>
+
+              <section className="mb-5 rounded-lg border border-slate-200 bg-white p-4 sm:p-5">
+                <div className="mb-4 flex flex-wrap items-start justify-between gap-2">
+                  <div>
+                    <h2 className="text-sm font-semibold text-slate-900">Salidas de inventario</h2>
+                    <p className="mt-0.5 text-xs text-slate-500">Unidades despachadas durante los últimos 6 meses</p>
+                  </div>
+                  <span className="rounded-sm bg-blue-50 px-2 py-1 text-xs font-medium text-blue-700">Por mes</span>
+                </div>
+                <div className="grid h-40 grid-cols-6 gap-2 border-b border-slate-200 px-1 sm:gap-4">
+                  {monthlyExits.map(month => (
+                    <div key={month.label} className="flex h-full min-w-0 flex-col items-center justify-end gap-1.5">
+                      <span className="text-[10px] tabular-nums text-slate-500">{month.total.toLocaleString('es-MX')}</span>
+                      <div className="flex w-full flex-1 items-end justify-center">
+                        <div
+                          className="w-full max-w-10 rounded-t-sm bg-blue-500 transition-[height] duration-500"
+                          style={{ height: `${Math.max(5, (month.total / maxMonthlyExit) * 100)}%` }}
+                          title={`${month.label}: ${month.total} unidades`}
+                        />
                       </div>
+                      <span className="pb-2 text-[10px] capitalize text-slate-500">{month.label}</span>
                     </div>
-                    <div className="bg-white rounded-xl border border-sky-100 p-4 shadow-sm">
-                      <h2 className="text-sm font-semibold text-sky-900 mb-3">Clientes en riesgo</h2>
-                      {metricas.clientes_sin_interaccion_reciente.length === 0 && (
-                        <p className="text-xs text-slate-400 py-2">Ningún cliente en riesgo por ahora.</p>
-                      )}
-                      {metricas.clientes_sin_interaccion_reciente.slice(0, 5).map((c, i, arr) => (
-                        <div key={c.id} className={`flex items-start justify-between py-2.5 ${i < arr.length - 1 ? 'border-b border-sky-50' : ''}`}>
-                          <div>
-                            <p className="text-sm font-medium text-sky-900">{c.nombre}</p>
-                            <p className="text-xs text-slate-400">{c.empresa ?? 'Sin empresa'} · sin interacción reciente</p>
+                  ))}
+                </div>
+              </section>
+
+              <div className="grid grid-cols-1 gap-5 lg:grid-cols-[minmax(0,1.6fr)_minmax(260px,1fr)]">
+                <section className="rounded-lg border border-slate-200 bg-white p-4 sm:p-5">
+                  <div className="mb-4 flex items-center justify-between gap-3">
+                    <div>
+                      <h2 className="text-sm font-semibold text-slate-900">Productos más vendidos</h2>
+                      <p className="mt-0.5 text-xs text-slate-500">Según salidas registradas en inventario</p>
+                    </div>
+                    <IcoChart />
+                  </div>
+                  {topProducts.length === 0 ? (
+                    <p className="py-6 text-center text-xs text-slate-400">Aún no hay salidas registradas.</p>
+                  ) : (
+                    <div className="space-y-4">
+                      {topProducts.map((product, index) => (
+                        <div key={product.producto_id} className="grid grid-cols-[minmax(0,1fr)_2fr_2.5rem] items-center gap-3">
+                          <span className="truncate text-xs text-slate-600" title={product.nombre}>{product.nombre}</span>
+                          <div className="h-2.5 overflow-hidden rounded-sm bg-slate-100">
+                            <div className={`h-full rounded-sm ${index === 0 ? 'bg-blue-500' : 'bg-sky-400'}`} style={{ width: `${Math.max(3, (product.total_vendido / maxProductSales) * 100)}%` }} />
                           </div>
-                          <span className="text-sky-300"><IcoChevR /></span>
+                          <span className="text-right text-xs font-semibold tabular-nums text-slate-700">{product.total_vendido}</span>
                         </div>
                       ))}
                     </div>
+                  )}
+                </section>
+
+                <section className="rounded-lg border border-slate-200 bg-white p-4 sm:p-5">
+                  <div className="mb-3 flex items-center justify-between gap-2">
+                    <div>
+                      <h2 className="text-sm font-semibold text-slate-900">Alertas de inventario</h2>
+                      <p className="mt-0.5 text-xs text-slate-500">Productos por debajo del mínimo</p>
+                    </div>
+                    <span className="rounded-full bg-amber-100 px-2 py-0.5 text-xs font-semibold text-amber-800">{scmMetricas?.productos_stock_bajo.length ?? '—'}</span>
                   </div>
-                </>
-              )}
+                  {!scmMetricas?.productos_stock_bajo.length ? (
+                    <p className="py-5 text-xs text-slate-400">No hay productos con stock bajo.</p>
+                  ) : (
+                    <div className="divide-y divide-slate-100">
+                      {scmMetricas.productos_stock_bajo.slice(0, 5).map(product => (
+                        <div key={product.id} className="flex items-center justify-between gap-3 py-2.5">
+                          <p className="truncate text-xs font-medium text-slate-700" title={product.nombre}>{product.nombre}</p>
+                          <span className="shrink-0 text-xs font-semibold tabular-nums text-rose-600">{product.stock_actual} / {product.stock_minimo}</span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </section>
+              </div>
             </div>
           )}
 

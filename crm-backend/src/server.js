@@ -9,8 +9,8 @@ async function iniciar() {
     await sequelize.authenticate();
     console.log('✅ Conexión a la base de datos establecida.');
 
-    await sequelize.sync({ alter: true });
-    console.log('✅ Modelos sincronizados con la base de datos.');
+    await sequelize.sync();
+    console.log('✅ Modelos verificados con la base de datos.');
 
     await Producto.update({ stock_minimo: 5 }, { where: {} });
     console.log('✅ Stock mínimo establecido en cinco unidades para todos los productos.');
